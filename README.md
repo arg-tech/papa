@@ -1,2 +1,2 @@
-# papa
+# PAPA
 PAPA: Amazing Python Analytics (in progress)
