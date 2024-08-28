@@ -98,6 +98,85 @@ def ova2_to_ova3(xaif_in, verbose=False):
     return xaif_out
 
 
+###########
+# Utility #
+###########
+
+# Given ID of an L-node, return whether it is reported speech or not
+def is_reported_speech(node_id, all_nodes):
+    if all_nodes[node_id]['type'] != 'L':
+        return False
+    else:
+        # Get incoming, and check if any is a YA other than Analysing
+        for node_in in all_nodes[node_id]['ein']:
+            if all_nodes[node_in]['type'] == 'YA' and all_nodes[node_in]['text'] != 'Analysing':
+                return True
+        
+        # Have gotten through all incoming nodes without finding a non-Analysing YA incoming
+        return False
+
+
+# Return speaker of L-node
+def l_node_speaker(node_id, all_nodes):
+    # ya_anchor is now the furthest back L-node in the chain: return the speaker
+    splits = all_nodes[node_id]['text'].split(':')
+    if len(splits) < 2:
+        spkr = ''
+        print(f"L-node with no recognisable speaker:\t{all_nodes[node_id]['nodeID']}")
+    else:
+        spkr = splits[0].strip()
+    return spkr
+
+
+# Given a reported speech L-node, return speaker of the reporting L-node
+def reporting_speaker(l_node_id, all_nodes):
+    quoting_ya = [n for n in all_nodes[l_node_id]['ein'] if all_nodes[n]['type'] == 'YA']
+
+    # No incoming YA to this node, or the YA is Analysing: this was the original locution so should return this spkr
+    if len(quoting_ya) == 0 or 'Analysing' in [all_nodes[q]['text'] for q in quoting_ya]:
+        return l_node_speaker(l_node_id, all_nodes)
+
+    # Incoming YA: this is reported, so check the L-node anchoring that YA
+    else:
+        if len(quoting_ya) > 1:
+            print(f"Multiple incoming YAs to L-node {l_node_id}: {all_nodes[l_node_id]['text']}")
+            print(f"Trying first only")
+        
+        ya_anchor = [n for n in all_nodes[quoting_ya[0]]['ein'] if all_nodes[n]['type'] == 'L']
+
+        # Report if anything unexpected found (too many/few L-nodes)
+        if len(ya_anchor) < 1:
+            print(f"Can't find L-node for YA {quoting_ya[0]}")
+            return ''
+        if len(ya_anchor) > 1:
+            print(f"Multiply-anchored YA {quoting_ya}: anchored by ", *ya_anchor)
+        
+        return reporting_speaker(ya_anchor[0], all_nodes)
+
+
+# Given an l_node, return ID of nonreported L-node
+# (if non-reported speech, self; if reported speech, L-node introudcing it)
+def start_of_l_chain(l_node_id, all_nodes):
+    quoting_ya = [n for n in all_nodes[l_node_id]['ein'] if all_nodes[n]['type'] == 'YA']
+    if len(quoting_ya) == 0 or 'Analysing' in [all_nodes[q]['text'] for q in quoting_ya]:
+        return l_node_id
+    else:
+        if len(quoting_ya) > 1:
+            print(f"Multiple incoming YAs to L-node {l_node_id}: {all_nodes[l_node_id]['text']}")
+            print(f"Trying first only")
+        
+        ya_anchor = [n for n in all_nodes[quoting_ya[0]]['ein'] if all_nodes[n]['type'] == 'L']
+
+        # Report if anything unexpected found (too many/few L-nodes)
+        if len(ya_anchor) < 1:
+            print(f"Can't find L-node for YA {quoting_ya[0]}")
+            return ''
+        if len(ya_anchor) > 1:
+            print(f"Multiply-anchored YA {quoting_ya}: anchored by ", *ya_anchor)
+        
+        return start_of_l_chain(ya_anchor[0], all_nodes)
+
+
 
 ###############################
 # Pre-Analytic Info Gathering #
@@ -195,6 +274,7 @@ def add_speakers(all_nodes):
     said = {}
 
     for n in [n for n in all_nodes if all_nodes[n]['type'] == 'L']:
+
         # Get L speakers
         splits = all_nodes[n]['text'].split(':')
         if len(splits) < 2:
@@ -206,25 +286,41 @@ def add_speakers(all_nodes):
             # Record node-wise
             all_nodes[n]['speaker'] = [spkr]
             
-            # Record speaker-wise
-            if spkr in said:
-                said[spkr].append(all_nodes[n]['nodeID'])
-            else:
-                said[spkr] = [all_nodes[n]['nodeID']]
-        
+
+            if not is_reported_speech(n, all_nodes):            
+                # Record speaker-wise
+                if spkr in said:
+                    said[spkr].append(all_nodes[n]['nodeID'])
+                else:
+                    said[spkr] = [all_nodes[n]['nodeID']]
+
         # Add for associated I-nodes
-        for e_out in all_nodes[n]['eout']:
-            if all_nodes[e_out]['type'] == 'YA':
-                ya = e_out
-                for ya_out in all_nodes[ya]['eout']:
-                    if all_nodes[ya_out]['type'] == 'I' and spkr != '':
-                        # record node-wise
-                        all_nodes[ya_out]['saidby'].append(spkr)
+        if not is_reported_speech(n, all_nodes):
+            for e_out in all_nodes[n]['eout']:
+                if all_nodes[e_out]['type'] == 'YA':
+                    ya = e_out
+                    for ya_out in all_nodes[ya]['eout']:
+                        if all_nodes[ya_out]['type'] == 'I' and spkr != '':
+                            # record node-wise
+                            all_nodes[ya_out]['saidby'].append(spkr)
 
-                        # record speaker-wise
-                        said[spkr].append(all_nodes[ya_out]['nodeID'])
-                        all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
+                            # record speaker-wise
+                            said[spkr].append(all_nodes[ya_out]['nodeID'])
+                            all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
+        # Reported speech: I-node should be attributed to the quoting speaker
+        else:
+            # Get quoting speaker
+            quoter = reporting_speaker(n, all_nodes)
 
+            for e_out in all_nodes[n]['eout']:
+                if all_nodes[e_out]['type'] == 'YA':
+                    ya = e_out
+                    for ya_out in all_nodes[ya]['eout']:
+                        if all_nodes[ya_out]['type'] == 'I' and quoter != '':
+                            # record node-wise only
+                            all_nodes[ya_out]['saidby'].append(quoter)
+                            
+                            all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
 
 
 
@@ -256,8 +352,9 @@ def add_speakers(all_nodes):
                                         said[spkr].append(all_nodes[i_out]['nodeID'])
                                     else:
                                         said[spkr] = all_nodes[i_out]['nodeID']
-        
+
         # Adding speaker attribution to arg relations based on speaker of L-nodes descended from the anchoring TA
+        # Requires update: original doesn't trace back in case of reported speech
         for ta_out in all_nodes[n]['eout']:
             # speakers of L-nodes descended from this TA
             # l_spkrs = [all_nodes[l]['speaker'] for l in all_nodes[n]['eout'] if all_nodes[l]['type'] == 'L']
@@ -266,6 +363,16 @@ def add_speakers(all_nodes):
                 for ya_out in all_nodes[ta_out]['eout']:
                     if all_nodes[ya_out]['type'] == 'RA' or 'CA' or 'MA':
                         all_nodes[ya_out]['speaker'] = l_spkrs
+
+        # # Adding speaker attribution to arg relations based on speaker of L-nodes descended from the anchoring TA
+        # for ta_out in all_nodes[n]['eout']:
+        #     # speakers of L-nodes descended from this TA
+        #     # l_spkrs = [all_nodes[l]['speaker'] for l in all_nodes[n]['eout'] if all_nodes[l]['type'] == 'L']
+        #     l_spkrs = [s for l in all_nodes[n]['eout'] if all_nodes[l]['type'] == 'L' for s in all_nodes[l]['speaker']]
+        #     if all_nodes[ta_out]['type'] == 'YA':
+        #         for ya_out in all_nodes[ta_out]['eout']:
+        #             if all_nodes[ya_out]['type'] == 'RA' or 'CA' or 'MA':
+        #                 all_nodes[ya_out]['speaker'] = l_spkrs
                             
     
     return all_nodes, said
@@ -313,9 +420,13 @@ def locution_markup_sort(old_xaif_text):
     marked_loc_spans = re.findall('(?<=id="node)\d+_\d+', old_xaif_text)
     return marked_loc_spans
 
-def add_loc_order(xaif, all_nodes):
+def add_loc_order(xaif, all_nodes, verbose=False):
     loc_order = locution_markup_sort(xaif['text'])
     counter = 1
+
+    if verbose:
+        print(loc_order)
+        print(all_nodes.keys())
 
     for num in loc_order:
         try: 
@@ -346,7 +457,8 @@ def spkr_wordcounts(xaif, verbose=False):
     text = text.replace('\n', '')
 
     # Assumes bracketed timestamps
-    split_list = re.split("([\.'\"?!’])(?=[\w\s\d-]+\[)", text)
+    # Added
+    split_list = re.split("([\.\"?'!’…]| -+)(?=[\w\s\d-]+\[)", text)
     if verbose:
         print("Split texts:")
         for s in split_list:
@@ -372,12 +484,12 @@ def spkr_wordcounts(xaif, verbose=False):
         if verbose:
             print("Turn splits as:")
             for i, t in enumerate(turn_split):
-                print(f"{i}: {t.strip()}")
+                print(f"\t{i}: {t.strip()}")
         spkr = turn_split[0].strip()
         try:
             content = turn_split[1].strip()
         except IndexError:
-            print("TURN CONTENT NOT FOUND: ", turn_split)
+            print("\tTURN CONTENT NOT FOUND: ", turn_split)
             content = ''
         # print(f"Speaker: {spkr}")
         # print(f"Content: {content}\n")

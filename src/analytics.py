@@ -65,6 +65,22 @@ def node_anchors_text(node_id, node_text, all_nodes):
     anchored = [n for n in all_nodes[node_id]['eout'] if all_nodes[n]['text'] == node_text]
     return len(anchored) > 0
 
+# Return ID of I-node (if any) anchored in L-node, possibly via a reported speech chain
+def i_from_l_node(l_node_id, all_nodes):
+    # Go through nodes from the L-node until YA found
+    for e_out in all_nodes[l_node_id]['eout']:
+        if all_nodes[e_out]['type'] == 'YA':
+            ya = e_out
+            # Check for L or I from this YA: if I then return; if L then continue down chain
+            for ya_out in all_nodes[ya]['eout']:
+                if all_nodes[ya_out]['type'] == 'I':
+                    return ya_out
+                elif all_nodes[ya_out]['type'] == 'L':
+                    return i_from_l_node(ya_out, all_nodes)
+    # If none found, return empty string
+    return ''
+
+
 ########
 # MONO #
 ########
@@ -73,6 +89,7 @@ def node_anchors_text(node_id, node_text, all_nodes):
 ########################
 # Counts and densities #
 ######################## 
+
 
 def arg_relation_counts(xaif):
     if 'AIF' in xaif.keys():
@@ -113,7 +130,7 @@ def arg_word_densities(xaif, verbose=False):
     if verbose:
         print("Keys in relation counts: ", relation_counts.keys())
         print("Wordcounts: ", spkr_wordcounts)
-
+        print(relation_counts)
     for s in relation_counts.keys():
         if spkr_wordcounts[s] != 0:
             relation_counts[s]['ra_word_density'] = relation_counts[s]['ra_count']/spkr_wordcounts[s]['wordcount']
@@ -194,42 +211,17 @@ def concl_first_perc(xaif):
                         for ta_out in all_nodes[ya_incoming_node]['eout']:
                             if all_nodes[ta_out]['type'] == 'L':
                                 l = ta_out
-                                for e_out in all_nodes[l]['eout']:
-                                    if all_nodes[e_out]['type'] == 'YA':
-                                        ya = e_out
-                                        for ya_out in all_nodes[ya]['eout']:
-                                            if all_nodes[ya_out]['type'] == 'I':
-                                                i = ya_out
-                                                # if ra in all_nodes[i]['ein']:
-                                                if ra in all_nodes[i]['eout']:
-                                                    concl_first[spkr]['ra_concl_first'] += 1
-                                                    found_order = True
-                                                elif ra in all_nodes[i]['ein']:
-                                                    found_order = True
-                                                else:
-                                                    print('I-node not connected to RA')
-                                                    print(f"\t\t{ya_out}: {all_nodes[ya_out]['text']}")
-                        # Get L-node descended from TA
-                        # bro wtf were you thinking with this
-                        # for ta_out in all_nodes[ya_incoming_node]['eout']:
-                        #     if all_nodes[ta_out]['type'] == 'L':
-                        #         l = ta_out
-                        #         for e_out in all_nodes[l]['eout']:
-                        #             if all_nodes[e_out]['type'] == 'YA':
-                        #                 ya = e_out
-                        #                 for ya_out in all_nodes[ya]['eout']:
-                        #                     if all_nodes[ya_out]['type'] == 'I':
-                        #                         i = ya_out
-                        #                         if ra in all_nodes[i]['ein']:
-                        #                             concl_first[spkr]['ra_concl_first'] += 1
-                        #                             found_order = True
-                        #                         elif ra in all_nodes[i]['eout']:
-                        #                             found_order = True
-                        #                         else:
-                        #                             print('\t\t\tI-node not connected to ra')
-
-            if not found_order:
-                print(f"Disconnected I-node")
+                                i = i_from_l_node(l, all_nodes)
+                                if ra in all_nodes[i]['eout']:
+                                    concl_first[spkr]['ra_concl_first'] += 1
+                                    found_order = True
+                                elif ra in all_nodes[i]['ein']:
+                                    found_order = True
+                                else:
+                                    print('I-node not connected to RA')
+                                    print(f"\t\t{i}: {all_nodes[i]['text']}")
+                print(f"Disconnected I-node ")
+        
         concl_first[spkr]['ra_concl_first_perc'] = concl_first[spkr]['ra_concl_first']/concl_first[spkr]['ra_count']
     
     return concl_first
