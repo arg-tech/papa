@@ -653,7 +653,7 @@ def avg_arg_breadths(xaif):
 
 # Report illocutionary acts used to complete the second part of an argument
 # Assumes this can be read from the locution which the Arguing-anchoring TA has an edge towards
-def arg_intros(xaif, debug=False):
+def arg_intros(xaif, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -683,7 +683,7 @@ def arg_intros(xaif, debug=False):
                 ya_type = [all_nodes[n]['text'] for n in all_nodes if all_nodes[n]['type'] == 'YA' 
                     and l_node in all_nodes[n]['ein']]
                 
-                if debug:
+                if verbose:
                     print(f"Checking for {relation_txt} relation {relation_id}")
                     print(f"Associated l-node found to be: {l_node}")
                     print(f"\t{all_nodes[l_node]['text']}")
@@ -691,20 +691,25 @@ def arg_intros(xaif, debug=False):
 
                 
                 if len(ya_type) == 0:
-                    if debug:
+                    if verbose:
                         print('no YAs found!')
                         print(f'Relation: {relation_id} in {relation_txt} list {relation_id_list}')
                 elif len(ya_type) > 1:
-                    if debug:
+                    if verbose:
                         print('too many YAs found!', ya_type)
                         print(f'Relation: {relation_id} in {relation_txt} list {relation_id_list}')
                 else:
-                    if ya_type[0] not in intro_yas[spkr]:
+                    print("ya_type[0]:", ya_type[0])
+                    # print(f"intro_yas[{spkr}]:", intro_yas[spkr])
+                    print(f"intro_yas[{spkr}]:", intro_yas[spkr]['arg_intros'][relation_txt])
+                    if ya_type[0] not in intro_yas[spkr]['arg_intros'][relation_txt]:
                         intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]] = 1
+                        print("Starting at 1")
                     else: 
                         intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]] += 1
+                        print("Now at a count of ", intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]])
 
-            if debug:
+            if verbose:
                 print()
     
     return intro_yas
