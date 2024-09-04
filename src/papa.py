@@ -51,6 +51,7 @@ def all_analytics(xaif, node_level=False, skipDialog=False):
         print(node_analytic_list)
         # xaif['analytics']['node'] = node_analytic_list
     
+    
     xaif['analytics'] = {
         "speaker": rel_counts,
         "node": node_analytic_list
