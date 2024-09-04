@@ -4,7 +4,7 @@ from . import analytics
 import sys
 import os
 
-def all_analytics(xaif):
+def all_analytics(xaif, node_level=False, skipDialog=False):
     # This involves redundancy currently bc all analytics are designed to call the info collection
     # so that they can be run individually with just the XAIF...
 
@@ -12,14 +12,17 @@ def all_analytics(xaif):
     # Speaker-level analytics
     analytic_list = []
     rel_counts = analytics.arg_relation_counts(xaif)
+    print(rel_counts)
 
     xaif = ova3.ova2_to_ova3(xaif)
-    if 'AIF' in xaif.keys():
-        wordcounts = ova3.spkr_wordcounts(xaif)
-    analytic_list.append(wordcounts)
-    analytic_list.append(analytics.concl_first_perc(xaif))
-    analytic_list.append(analytics.arg_word_densities(xaif))
-    analytic_list.append(analytics.arg_loc_densities(xaif))
+    #For now skipping thing that don't work/aren't needed for forecast
+    if not skipDialog:
+        if 'AIF' in xaif.keys():
+            wordcounts = ova3.spkr_wordcounts(xaif)
+        analytic_list.append(wordcounts)
+        analytic_list.append(analytics.concl_first_perc(xaif))
+        analytic_list.append(analytics.arg_word_densities(xaif))
+        analytic_list.append(analytics.arg_loc_densities(xaif))
     analytic_list.append(analytics.ra_in_serial(xaif))
     analytic_list.append(analytics.ra_in_convergent(xaif))
     analytic_list.append(analytics.ra_in_divergent(xaif))
@@ -30,8 +33,9 @@ def all_analytics(xaif):
     analytic_list.append(analytics.direct_args_from_others(xaif))
     analytic_list.append(analytics.indirect_args_from_others(xaif))
 
-    # concl_first = analytics.concl_first_perc(xaif)
-    # arg_densities = analytics.arg_densities(xaif)
+    concl_first = analytics.concl_first_perc(xaif)
+    if not skipDialog:
+        arg_densities = analytics.arg_densities(xaif)
 
     for s in rel_counts.keys():
         # rel_counts[s].update(concl_first[s])
@@ -51,4 +55,5 @@ def all_analytics(xaif):
         "speaker": rel_counts,
         "node": node_analytic_list
     }
+    print(xaif)
     return xaif
