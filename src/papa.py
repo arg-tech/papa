@@ -55,5 +55,4 @@ def all_analytics(xaif, node_level=False, skipDialog=False):
         "speaker": rel_counts,
         "node": node_analytic_list
     }
-    print(xaif)
     return xaif
