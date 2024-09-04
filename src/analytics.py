@@ -1472,3 +1472,22 @@ def responsiveness(xaif, debug=False):
             responsiveness[spkr] = len(mas)/len(current_spkr_tas_from_q)
 
     return responsiveness
+
+
+########################
+# Node-Level#
+######################## 
+
+########################
+# Counts#
+######################## 
+
+#TODO: make dictionary have word count heading before start of list
+def node_wc(xaif):
+    wordcount = []
+    inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    for n in inodes:
+        # wordcount[n["nodeID"]] = len(n['text'].split())
+        
+        wordcount.append({"node id:": n['nodeID'], "word count:": len(n['text'].split())})
+    return wordcount
