@@ -38,5 +38,17 @@ def all_analytics(xaif):
         for a in analytic_list:
             rel_counts[s].update(a[s])
 
-    xaif['analytics'] = rel_counts
+    # xaif['analytics'] = rel_counts
+
+    #Adding analytics which calculate 'per node'
+    if node_level:
+        node_analytic_list = []
+        node_analytic_list.append(analytics.node_wc(xaif))
+        print(node_analytic_list)
+        # xaif['analytics']['node'] = node_analytic_list
+    
+    xaif['analytics'] = {
+        "speaker": rel_counts,
+        "node": node_analytic_list
+    }
     return xaif
