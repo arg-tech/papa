@@ -48,6 +48,10 @@ def all_analytics(xaif, node_level=False, skipDialog=False):
     if node_level:
         node_analytic_list = []
         node_analytic_list.append(analytics.node_wc(xaif))
+        node_analytic_list.append(analytics.supportedNodes(xaif))
+        node_analytic_list.append(analytics.attackedNodes(xaif))
+        node_analytic_list.append(analytics.nodeTenseScores(xaif))
+        node_analytic_list.append(analytics.ner(xaif))
         print(node_analytic_list)
         # xaif['analytics']['node'] = node_analytic_list
     

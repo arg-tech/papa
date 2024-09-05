@@ -6,6 +6,13 @@ import sys
 import os
 from collections import Counter
 
+import nltk
+nltk.data.path.append("tools/nltk_data")
+import spacy
+# import en_core_web_sm
+# nlp = en_core_web_sm.load()
+nlp = spacy.load("en_core_web_sm")
+
 ################
 # MISC UTILITY #
 ################
@@ -1481,12 +1488,69 @@ def responsiveness(xaif, debug=False):
 # Counts#
 ######################## 
 
-#TODO: make dictionary have word count heading before start of list
+#Returns each I node and its word count
 def node_wc(xaif):
-    wordcount = []
+    wordcount = {}
+    wordcount_list = []
     inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
     for n in inodes:
         # wordcount[n["nodeID"]] = len(n['text'].split())
         
-        wordcount.append({"node id:": n['nodeID'], "word count:": len(n['text'].split())})
+        wordcount_list.append({"node id:": n['nodeID'], "word count:": len(n['text'].split())})
+    wordcount = {"word_count": wordcount_list}
     return wordcount
+
+#Returns count of I nodes with incoming RA
+def supportedNodes(xaif):
+
+    inodes = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    inode_incoming = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in inodes]
+
+    supportNodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in inode_incoming and n['type'] == 'RA']
+    return {"supported_nodes": len(supportNodes)}
+
+#Returns number of I nodes with incoming CA
+def attackedNodes(xaif):
+    inodes = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    inode_incoming = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in inodes]
+
+    attackNodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in inode_incoming and n['type'] == 'CA']
+    
+    return {"attacked_nodes": len(attackNodes)}
+
+# Verb tags: https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
+# NLTK tagger: https://www.nltk.org/book/ch05.html
+#Returns a past present and base verb count for each inode
+def nodeTenseScores(xaif):
+    past = int(0)
+    present = int(0)
+    base = int(0)
+    tense_list = []
+    tense_count = {}
+    inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    for node in inodes:
+        x = nltk.word_tokenize(node['text'])
+        token_text = nltk.pos_tag(x)
+        for z, tag in token_text:
+            if tag == "VBD" or tag == "VBN":
+                past += 1
+            elif tag == "VBG" or tag == "VBP" or tag == "VBZ":
+                present += 1
+            elif tag == "VB":
+                base += 1
+        tense_list.append({"node id": node['nodeID'], "past": past, "present": present, "base": base})
+    tense_count = {"node_tenses": tense_list}
+    return tense_count
+
+#Tutorial: https://wellsr.com/python/python-named-entity-recognition-with-nltk-and-spacy/
+#Returns identified named entities with label and nodeid
+def ner(xaif):
+    ner_values = {}
+    ner_list = []
+    inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    for node in inodes:
+        doc = nlp(node['text'])
+        for ent in doc.ents:
+            ner_list.append({"node id": node['nodeID'], "text": ent.text, "label": ent.label_})
+    ner_values = {"named entities": ner_list}
+    return ner_values

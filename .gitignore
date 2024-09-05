@@ -2,3 +2,6 @@ __pycache__/
 .DS_Store
 *.ipynb
 !episode_fetch_and_prep.ipynb
+!forecast_fetch
+output/
+data/forecast_maps
