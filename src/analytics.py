@@ -220,7 +220,7 @@ def concl_first_perc(xaif):
                                 else:
                                     print('I-node not connected to RA')
                                     print(f"\t\t{i}: {all_nodes[i]['text']}")
-                print(f"Disconnected I-node ")
+                                    # print(f"Disconnected I-node ")
         
         concl_first[spkr]['ra_concl_first_perc'] = concl_first[spkr]['ra_concl_first']/concl_first[spkr]['ra_count']
     
@@ -518,7 +518,7 @@ def initial_arg(ra_id, seen_ras, all_nodes, debug=False):
     # Avoid repeats
     return list(set(initial_args))
 
-def path_lens_from_arg(ra_id, all_nodes):
+def path_lens_from_arg(ra_id, all_nodes, verbose=False):
     target_spkr = all_nodes[ra_id]['speaker'][0]
     i_node_concls = [n for n in all_nodes if ra_id in all_nodes[n]['ein'] 
                      and all_nodes[n]['type'] == 'I']
@@ -539,7 +539,7 @@ def path_lens_from_arg(ra_id, all_nodes):
     return path_list
 
 
-def arg_depths(xaif, debug=False):
+def arg_depths(xaif, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -550,7 +550,7 @@ def arg_depths(xaif, debug=False):
     ra_depths = {}
     
     for spkr in said:
-        if debug:
+        if verbose:
             print("Checking speaker ", spkr)
         ra_depths[spkr] = {'arg_depths': []}
 
@@ -562,12 +562,14 @@ def arg_depths(xaif, debug=False):
 
         # get all starts (this is ugly/inefficient but oh well)
         for ra in spkr_ra_all:
-            spkr_starts += initial_arg(ra, [], all_nodes, debug=debug)
+            spkr_starts += initial_arg(ra, [], all_nodes, debug=verbose)
         spkr_starts = list(set(spkr_starts))
         
         # Follow each argument path from the first RAs in each path
         for starter_arg in spkr_starts:
-            ra_depths[spkr]['arg_depths'] = ra_depths[spkr]['arg_depths'] + path_lens_from_arg(starter_arg, all_nodes)
+            if verbose:
+                print("Looking for argument ", starter_arg)
+            ra_depths[spkr]['arg_depths'] = ra_depths[spkr]['arg_depths'] + path_lens_from_arg(starter_arg, all_nodes, verbose=verbose)
 
     return ra_depths
 
@@ -627,7 +629,7 @@ def arg_breadths(xaif, debug=False):
     return ra_breadths
 
 
-def avg_arg_depths(xaif):
+def avg_arg_depths(xaif, verbose=False):
     depths = arg_depths(xaif)
     for spkr in depths:
         try:
@@ -699,15 +701,10 @@ def arg_intros(xaif, verbose=False):
                         print('too many YAs found!', ya_type)
                         print(f'Relation: {relation_id} in {relation_txt} list {relation_id_list}')
                 else:
-                    print("ya_type[0]:", ya_type[0])
-                    # print(f"intro_yas[{spkr}]:", intro_yas[spkr])
-                    print(f"intro_yas[{spkr}]:", intro_yas[spkr]['arg_intros'][relation_txt])
                     if ya_type[0] not in intro_yas[spkr]['arg_intros'][relation_txt]:
                         intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]] = 1
-                        print("Starting at 1")
                     else: 
                         intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]] += 1
-                        print("Now at a count of ", intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]])
 
             if verbose:
                 print()
