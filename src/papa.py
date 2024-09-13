@@ -4,7 +4,7 @@ from . import analytics
 import sys
 import os
 
-def all_analytics(xaif, node_level=False, skipDialog=False):
+def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     # This involves redundancy currently bc all analytics are designed to call the info collection
     # so that they can be run individually with just the XAIF...
 
@@ -44,6 +44,12 @@ def all_analytics(xaif, node_level=False, skipDialog=False):
 
     # xaif['analytics'] = rel_counts
 
+    #Forecast-specific analytics
+    if forecast:
+        forecast_analytics_list = []
+        forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
+        forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
+
     #Adding analytics which calculate 'per node'
     if node_level:
         node_analytic_list = []
@@ -58,7 +64,8 @@ def all_analytics(xaif, node_level=False, skipDialog=False):
     
     xaif['analytics'] = {
         "speaker": rel_counts,
-        "node": node_analytic_list
+        "node": node_analytic_list,
+        "forecast": forecast_analytics_list
     }
     print(xaif)
     return xaif
