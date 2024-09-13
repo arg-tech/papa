@@ -7,6 +7,8 @@ import os
 from collections import Counter
 
 import nltk
+import csv
+import re
 nltk.data.path.append("tools/nltk_data")
 import spacy
 # import en_core_web_sm
@@ -1551,3 +1553,65 @@ def ner(xaif):
             ner_list.append({"node id": node['nodeID'], "text": ent.text, "label": ent.label_})
     ner_values = {"named entities": ner_list}
     return ner_values
+
+
+def addForecastAccuracy(xaif):
+    match = re.search("^Part ID:\d+", xaif['text'])
+    match_span = match.span()
+    id = match.string[8:match_span[1]]
+    with open ('forecast750_accuracyscores.csv', 'r') as file:
+        csvfile = csv.reader(file)
+        for line in csvfile:
+            if line[0] == id:
+                return {"accuracy": line[11]}
+    
+def addNodeOutcomes(xaif):
+    match = re.search("^Part ID:\d+", xaif['text'])
+    match_span = match.span()
+    id = match.string[8:match_span[1]]
+    index = 0
+
+    with open ('forecast750_accuracyscores.csv', 'r') as file:
+        node_outcomes = []
+        csvfile = csv.reader(file)
+        for line in csvfile:
+            if line[0] == id:
+                probability_list = []
+                items = line[8][1:-1].split(',')
+                probability_list.extend(items)
+                outcome_list = []
+                items = line[10][1:-1].split(',')
+                outcome_list.extend(items)
+                inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+                for inode in inodes:
+                    match = re.search(r"\, \d?\.\d+ \w+", inode['text'])
+                    if match != None:
+                        match_span = match.span()
+                        match_split = match.string[match_span[0]:match_span[1]].split()
+                        probability = match_split[1]
+                        if probability in probability_list:
+                            list_index = probability_list.index(probability)
+                            print(len(outcome_list))
+                            outcome = ''
+                            if len(outcome_list) > 1:
+                                outcome = outcome_list[list_index]
+                            elif len(outcome_list) == 1:
+                                print(list_index)
+                                if int(outcome_list[0]) == 0:
+                                    if list_index == 0:
+                                        outcome = 0
+                                    elif list_index == 1:
+                                        outcome = 1
+                                elif int(outcome_list[0]) == 1:
+                                    if list_index == 0:
+                                        outcome = 1
+                                    elif list_index == 1:
+                                        outcome = 0
+                            node_outcomes.append({"nodeID": inode['nodeID'], "outcome": outcome})
+                        else:
+                            print("no match :()")
+        
+        return {"outcomes" : node_outcomes}
+                        
+
+
