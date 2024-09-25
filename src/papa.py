@@ -33,26 +33,25 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     analytic_list.append(analytics.direct_args_from_others(xaif))
     analytic_list.append(analytics.indirect_args_from_others(xaif))
 
-    concl_first = analytics.concl_first_perc(xaif)
-    if not skipDialog:
-        arg_densities = analytics.arg_densities(xaif)
+    # concl_first = analytics.concl_first_perc(xaif)
+    # if not skipDialog:
+    #     arg_densities = analytics.arg_densities(xaif)
 
     for s in rel_counts.keys():
         # rel_counts[s].update(concl_first[s])
         for a in analytic_list:
             rel_counts[s].update(a[s])
 
-    # xaif['analytics'] = rel_counts
-
     #Forecast-specific analytics
+    forecast_analytics_list = []
     if forecast:
-        forecast_analytics_list = []
+        # forecast_analytics_list = []
         forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
         forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
 
     #Adding analytics which calculate 'per node'
+    node_analytic_list = []
     if node_level:
-        node_analytic_list = []
         node_analytic_list.append(analytics.node_wc(xaif))
         node_analytic_list.append(analytics.supportedNodes(xaif))
         node_analytic_list.append(analytics.attackedNodes(xaif))
