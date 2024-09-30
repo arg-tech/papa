@@ -43,15 +43,14 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
             rel_counts[s].update(a[s])
 
     #Forecast-specific analytics
-    forecast_analytics_list = []
     if forecast:
-        # forecast_analytics_list = []
+        forecast_analytics_list = []
         forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
         forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
 
     #Adding analytics which calculate 'per node'
-    node_analytic_list = []
     if node_level:
+        node_analytic_list = []
         node_analytic_list.append(analytics.node_wc(xaif))
         node_analytic_list.append(analytics.supportedNodes(xaif))
         node_analytic_list.append(analytics.attackedNodes(xaif))
@@ -62,9 +61,12 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     
     
     xaif['analytics'] = {
-        "speaker": rel_counts,
-        "node": node_analytic_list,
-        "forecast": forecast_analytics_list
+        "speaker": rel_counts
     }
+    if node_level:
+        xaif['analytics']['node'] = node_analytic_list
+    if forecast:
+        xaif['analytics']['forecast'] = forecast_analytics_list
+    
     print(xaif)
     return xaif
