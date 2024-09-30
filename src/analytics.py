@@ -11,8 +11,8 @@ import csv
 import re
 nltk.data.path.append("tools/nltk_data")
 import spacy
-# import en_core_web_sm
-# nlp = en_core_web_sm.load()
+import en_core_web_sm
+nlp = en_core_web_sm.load()
 nlp = spacy.load("en_core_web_sm")
 
 ################
@@ -155,13 +155,14 @@ def arg_word_densities(xaif, verbose=False):
     return relation_counts
 
 
-def arg_loc_densities(xaif):
+def arg_loc_densities(xaif, verbose=False):
     relation_counts = arg_relation_counts(xaif)
     if 'AIF' in xaif.keys():
         all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
 
+    print("Speakers listed in relation_counts:", list(relation_counts.keys()))
     for s in relation_counts.keys():
         spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
 
