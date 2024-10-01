@@ -12,7 +12,7 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     # Speaker-level analytics
     analytic_list = []
     rel_counts = analytics.arg_relation_counts(xaif)
-    print(rel_counts)
+    # print(rel_counts)
 
     xaif = ova3.ova2_to_ova3(xaif)
     #For now skipping thing that don't work/aren't needed for forecast
@@ -56,7 +56,7 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
         node_analytic_list.append(analytics.attackedNodes(xaif))
         node_analytic_list.append(analytics.nodeTenseScores(xaif))
         node_analytic_list.append(analytics.ner(xaif))
-        print(node_analytic_list)
+        # print(node_analytic_list)
         # xaif['analytics']['node'] = node_analytic_list
     
     
@@ -68,5 +68,5 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     if forecast:
         xaif['analytics']['forecast'] = forecast_analytics_list
     
-    print(xaif)
+    # print(xaif)
     return xaif

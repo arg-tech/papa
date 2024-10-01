@@ -161,8 +161,8 @@ def arg_loc_densities(xaif, verbose=False):
         all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
-
-    print("Speakers listed in relation_counts:", list(relation_counts.keys()))
+    if verbose:
+        print("Speakers listed in relation_counts:", list(relation_counts.keys()))
     for s in relation_counts.keys():
         spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
 
