@@ -100,7 +100,7 @@ def i_from_l_node(l_node_id, all_nodes):
 ######################## 
 
 
-def arg_relation_counts(xaif):
+def arg_relation_counts(xaif, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -109,7 +109,14 @@ def arg_relation_counts(xaif):
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
     ma_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'MA']
 
+    if verbose:
+        print(f"{len(ra_nodes)} RAs found")
+        print(f"{len(ca_nodes)} CAs found")
+        print(f"{len(ma_nodes)} MAs found")
+        print("Speakers in 'said': ", list(said.keys()))
+
     relation_counts = {}
+
     for spkr in said:
         spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
         spkr_ca_all = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
