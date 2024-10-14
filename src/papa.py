@@ -23,32 +23,29 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
         analytic_list.append(analytics.concl_first_perc(xaif))
         analytic_list.append(analytics.arg_word_densities(xaif))
         analytic_list.append(analytics.arg_loc_densities(xaif))
-    analytic_list.append(analytics.ra_in_serial(xaif))
-    analytic_list.append(analytics.ra_in_convergent(xaif))
-    analytic_list.append(analytics.ra_in_divergent(xaif))
-    analytic_list.append(analytics.ra_in_linked(xaif))
-    analytic_list.append(analytics.avg_arg_depths(xaif))
-    analytic_list.append(analytics.avg_arg_breadths(xaif))
-    analytic_list.append(analytics.arg_intros(xaif))
-    analytic_list.append(analytics.direct_args_from_others(xaif))
-    analytic_list.append(analytics.indirect_args_from_others(xaif))
+        analytic_list.append(analytics.avg_arg_breadths(xaif))
+        analytic_list.append(analytics.arg_intros(xaif))
+        analytic_list.append(analytics.avg_arg_depths(xaif))
+        analytic_list.append(analytics.direct_args_from_others(xaif))
+        analytic_list.append(analytics.indirect_args_from_others(xaif))
+        analytic_list.append(analytics.ra_in_serial(xaif))
+        analytic_list.append(analytics.ra_in_convergent(xaif))
+        analytic_list.append(analytics.ra_in_divergent(xaif))
+        analytic_list.append(analytics.ra_in_linked(xaif))
+    
 
-    concl_first = analytics.concl_first_perc(xaif)
+        concl_first = analytics.concl_first_perc(xaif)
     if not skipDialog:
         arg_densities = analytics.arg_densities(xaif)
 
-    for s in rel_counts.keys():
-        # rel_counts[s].update(concl_first[s])
-        for a in analytic_list:
-            rel_counts[s].update(a[s])
+    if analytic_list != []:
+        for s in rel_counts.keys():
+            # rel_counts[s].update(concl_first[s])
+            for a in analytic_list:
+                rel_counts[s].update(a[s])
 
     # xaif['analytics'] = rel_counts
 
-    #Forecast-specific analytics
-    if forecast:
-        forecast_analytics_list = []
-        forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
-        forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
 
     #Adding analytics which calculate 'per node'
     if node_level:
@@ -58,8 +55,20 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
         node_analytic_list.append(analytics.attackedNodes(xaif))
         node_analytic_list.append(analytics.nodeTenseScores(xaif))
         node_analytic_list.append(analytics.ner(xaif))
+        node_analytic_list.append(analytics.sentiment(xaif))
         print(node_analytic_list)
         # xaif['analytics']['node'] = node_analytic_list
+
+        #Forecast-specific analytics
+    if forecast:
+        forecast_analytics_list = []
+        forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
+        forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
+        subgraphs = analytics.getHypSubgraphs(xaif)
+        forecast_analytics_list.append(analytics.raCount(xaif))
+
+        for graph in subgraphs:
+            forecast_analytics_list.append(analytics.raCount(graph))
     
     
     xaif['analytics'] = {
