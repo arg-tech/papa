@@ -12,8 +12,8 @@ import csv
 import re
 nltk.data.path.append("tools/nltk_data")
 import spacy
-# import en_core_web_sm
-# nlp = en_core_web_sm.load()
+import en_core_web_sm
+nlp = en_core_web_sm.load()
 nlp = spacy.load("en_core_web_sm")
 
 ################
@@ -101,7 +101,7 @@ def i_from_l_node(l_node_id, all_nodes):
 ######################## 
 
 
-def arg_relation_counts(xaif):
+def arg_relation_counts(xaif, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -110,7 +110,14 @@ def arg_relation_counts(xaif):
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
     ma_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'MA']
 
+    if verbose:
+        print(f"{len(ra_nodes)} RAs found")
+        print(f"{len(ca_nodes)} CAs found")
+        print(f"{len(ma_nodes)} MAs found")
+        print("Speakers in 'said': ", list(said.keys()))
+
     relation_counts = {}
+
     for spkr in said:
         spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
         spkr_ca_all = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
@@ -156,13 +163,14 @@ def arg_word_densities(xaif, verbose=False):
     return relation_counts
 
 
-def arg_loc_densities(xaif):
+def arg_loc_densities(xaif, verbose=False):
     relation_counts = arg_relation_counts(xaif)
     if 'AIF' in xaif.keys():
         all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
-
+    if verbose:
+        print("Speakers listed in relation_counts:", list(relation_counts.keys()))
     for s in relation_counts.keys():
         spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
 

@@ -457,8 +457,8 @@ def spkr_wordcounts(xaif, verbose=False):
     text = text.replace('\n', '')
 
     # Assumes bracketed timestamps
-    # Added
-    split_list = re.split("([\.\"?'!’…]| -+)(?=[\w\s\d-]+\[)", text)
+    # Added comma
+    split_list = re.split("([\.\"?'!’…,]| -+)(?=[\w\s\d-]+\[)", text)
     if verbose:
         print("Split texts:")
         for s in split_list:

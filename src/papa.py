@@ -12,7 +12,7 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     # Speaker-level analytics
     analytic_list = []
     rel_counts = analytics.arg_relation_counts(xaif)
-    print(rel_counts)
+    # print(rel_counts)
 
     xaif = ova3.ova2_to_ova3(xaif)
     #For now skipping thing that don't work/aren't needed for forecast
@@ -38,12 +38,13 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     if not skipDialog:
         arg_densities = analytics.arg_densities(xaif)
 
+
     if analytic_list != []:
         for s in rel_counts.keys():
             # rel_counts[s].update(concl_first[s])
             for a in analytic_list:
                 rel_counts[s].update(a[s])
-
+                
     # xaif['analytics'] = rel_counts
 
 
@@ -57,7 +58,9 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
         node_analytic_list.append(analytics.ner(xaif))
         node_analytic_list.append(analytics.sentiment(xaif))
         print(node_analytic_list)
-        # xaif['analytics']['node'] = node_analytic_list
+
+        # print(node_analytic_list)
+
 
         #Forecast-specific analytics
     if forecast:
@@ -72,9 +75,12 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
     
     
     xaif['analytics'] = {
-        "speaker": rel_counts,
-        "node": node_analytic_list,
-        "forecast": forecast_analytics_list
+        "speaker": rel_counts
     }
-    print(xaif)
+    if node_level:
+        xaif['analytics']['node'] = node_analytic_list
+    if forecast:
+        xaif['analytics']['forecast'] = forecast_analytics_list
+    
+    # print(xaif)
     return xaif

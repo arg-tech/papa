@@ -60,7 +60,7 @@ def ova2_to_ova3(xaif_in):
             "cqdescriptorfulfillments": []
         },
         "text": '',
-        "OVA": { # Could leave this empty tbh: will be unworkable in OVA anyway.
+        "OVA": { 
             "firstname": 'Convertor',
             "surname": 'Script',
             "url": '',
@@ -132,9 +132,6 @@ def ova2_to_ova3(xaif_in):
 
 
 
-# Oh shit. Are there any episodes with a MIX of OVA types? In this case yeah, need to be merging AIF not OVA...
-# But... let's just have the option to merge it yourself in the meantime, it won't take too long.
-
 # Combine all json files in a directory, assuming they're OVA3 files
 def combine_ova3(dir_in, file_out, verbose=False):
     json_list = glob(f"{dir_in}/*.json")
@@ -157,7 +154,7 @@ def combine_ova3(dir_in, file_out, verbose=False):
             "cqdescriptorfulfillments": []
         },
         "text": '',
-        "OVA": { # Could leave this empty tbh: will be unworkable in OVA anyway.
+        "OVA": { 
             "firstname": 'Combination',
             "surname": 'Script',
             "url": '',
@@ -175,7 +172,8 @@ def combine_ova3(dir_in, file_out, verbose=False):
         # Get OVA3 version if it's OVA2
         if 'AIF' not in xaif_in:
             xaif_in = ova2_to_ova3(xaif_in)
-            
+
+        # Copy across core AIF
         for n in xaif_in['AIF']['nodes']:
             if n not in combined_xaif['AIF']['nodes']:
                 combined_xaif['AIF']['nodes'].append(n)
@@ -188,6 +186,15 @@ def combine_ova3(dir_in, file_out, verbose=False):
             if l not in combined_xaif['AIF']['locutions']:
                 combined_xaif['AIF']['locutions'].append(l)
 
+        # Copy across OVA
+        for n in xaif_in['OVA']['nodes']:
+            if n not in combined_xaif['OVA']['nodes']:
+                combined_xaif['OVA']['nodes'].append(n)
+        
+        for e in xaif_in['OVA']['edges']:
+            if e not in combined_xaif['OVA']['edges']:
+                combined_xaif['OVA']['edges'].append(e)
+        
         file_txts.append(xaif_in["text"])
     
 
