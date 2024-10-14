@@ -7,6 +7,7 @@ import os
 from collections import Counter
 
 import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
 import csv
 import re
 nltk.data.path.append("tools/nltk_data")
@@ -1562,19 +1563,40 @@ def ner(xaif):
     ner_values = {"named entities": ner_list}
     return ner_values
 
+#1 = positive -1 = negative
+def sentiment(xaif):
+    sia = SentimentIntensityAnalyzer()
+    sent_list = []
+
+    inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    for node in inodes:
+        node_sent = sia.polarity_scores(node['text'])
+        sent_list.append({"node id": node['nodeID'], "sentiment": node_sent})
+    
+    return {"sentiment": sent_list}
+
+
+
 
 def addForecastAccuracy(xaif):
-    match = re.search("^Part ID:\d+", xaif['text'])
-    match_span = match.span()
-    id = match.string[8:match_span[1]]
-    with open ('forecast750_accuracyscores.csv', 'r') as file:
-        csvfile = csv.reader(file)
-        for line in csvfile:
-            if line[0] == id:
-                return {"accuracy": line[11]}
+    print(xaif['text'])
+    try:
+        match = re.search(r"Part ID: ?\d+", xaif['text'])
+        match_span = match.span()
+        id = match.string[8:match_span[1]]
+        with open ('forecast750_accuracyscores.csv', 'r') as file:
+            csvfile = csv.reader(file)
+            for line in csvfile:
+                if line[0] == id:
+                    if line[11] != "unknown":
+                        return {"accuracy": line[11]}
+                    else:
+                        return {"accuracy": "unknown"}
+    except:
+        print("No Part ID found")
     
 def addNodeOutcomes(xaif):
-    match = re.search("^Part ID:\d+", xaif['text'])
+    match = re.search(r"Part ID: ?\d+", xaif['text'])
     match_span = match.span()
     id = match.string[8:match_span[1]]
     index = 0
@@ -1593,33 +1615,205 @@ def addNodeOutcomes(xaif):
                 inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
                 for inode in inodes:
                     match = re.search(r"\, \d?\.\d+ \w+", inode['text'])
+                    print(match)
                     if match != None:
                         match_span = match.span()
                         match_split = match.string[match_span[0]:match_span[1]].split()
                         probability = match_split[1]
                         if probability in probability_list:
                             list_index = probability_list.index(probability)
-                            print(len(outcome_list))
                             outcome = ''
                             if len(outcome_list) > 1:
                                 outcome = outcome_list[list_index]
                             elif len(outcome_list) == 1:
-                                print(list_index)
-                                if int(outcome_list[0]) == 0:
-                                    if list_index == 0:
-                                        outcome = 0
-                                    elif list_index == 1:
-                                        outcome = 1
-                                elif int(outcome_list[0]) == 1:
-                                    if list_index == 0:
-                                        outcome = 1
-                                    elif list_index == 1:
-                                        outcome = 0
-                            node_outcomes.append({"nodeID": inode['nodeID'], "outcome": outcome})
+                                if outcome_list[0] == 1 or outcome_list[0] == 0:
+                                    if int(outcome_list[0]) == 0:
+                                        if list_index == 0:
+                                            outcome = 0
+                                        elif list_index == 1:
+                                            outcome = 1
+                                    elif int(outcome_list[0]) == 1:
+                                        if list_index == 0:
+                                            outcome = 1
+                                        elif list_index == 1:
+                                            outcome = 0
+                                    node_outcomes.append({"nodeID": inode['nodeID'], "outcome": outcome})
+                                else:
+                                    node_outcomes.append({"nodeID": inode['nodeID'], "outcome": "unknown"})
+
                         else:
-                            print("no match :()")
+                            print("no match :(")
         
         return {"outcomes" : node_outcomes}
-                        
+    
 
+def getHypSubgraphs(xaif):
+
+    subgraphs = []
+
+    inode_ids = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+
+    nodetoinode = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in inode_ids]
+
+    #Get YA "Hypothesising" nodes
+    hyp_nodes = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['nodeID'] in nodetoinode and n['text'] == "Hypothesising"]
+
+    #Get inodes which are anchored in YA "Hypothesising"
+    
+    for hnode in hyp_nodes:
+        hyp_inodes = []
+        inode = [e['toID'] for e in xaif['AIF']['edges'] if e['fromID'] == hnode]
+        hyp_inodes.append(inode[0])
+        print("Inodes anchored in YA Hypothesising: " + str(hyp_inodes))
+    
+        #Get incoming nodes to Hypothesising YA-Anchored I-nodes
+        s_nodes = []
+        inodes1 = []
+        for hyp_inode in hyp_inodes:
+            #List of s nodes incoming to hypothesis option
+            incoming_s_list = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] == hyp_inode]
+            #List of MA nodes which are incoming to hypothesis option
+            found_node_l = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "MA" and n['nodeID'] in incoming_s_list]
+            for n in found_node_l:
+                s_nodes.append(n)
+            inodel1 = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in s_nodes]
+            for id in inodel1:
+                for node in xaif['AIF']['nodes']:
+                    if node['nodeID'] == id and node['type'] == "I":
+                        inodes1.append(id)
+        #I nodes with forecasts and probabilities
+        print("Level 1 inodes: " + str(inodes1))
+
+        #Loop through nodes connected to forecast I-node
+        current_node = ''
+        moreNodes = True
+        subgraph_nodes = []
+        subgraph_edges = []
+
+
+        #Find all incoming nodes to current node
+        #Loop through and find all incoming nodes again with each node in loop becoming the current node
+
+
+        for nodeid in inodes1:
+            node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == nodeid]
+            current_node = node[0]
+            next_nodes = []
+
+            subgraph_nodes = []
+            subgraph_edges = []
+            
+            subgraph_nodes.append(current_node)
+
+            while moreNodes:
+                print("------------------------")
+                print("Current Node: ")
+                print(current_node)
+                
+
+
+                incoming_edges = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] == current_node['nodeID']]
+                #This is the RA nodes or any other incoming YA nodes
+                # print("Incoming edges/RAs: ")
+                # print(incoming_edges)
+                if len(incoming_edges) == 0:
+                    moreNodes == False
+                    break
+                
+                incoming_non_YA = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['nodeID'] in incoming_edges and n['type'] != "YA"]
+                edges_to_append = [e for e in xaif['AIF']['edges'] if e['fromID'] in incoming_edges and e['fromID'] in incoming_non_YA]
+                
+                if edges_to_append != []:
+                    subgraph_edges.append(edges_to_append)
+                edges_to_append = []
+
+                print("edges to append 1:")
+                print([e for e in xaif['AIF']['edges'] if e['fromID'] in incoming_edges and e['fromID'] in incoming_non_YA])
+                
+                # print("Incoming non YA: ")
+                # print(incoming_non_YA)
+
+                #These are the s nodes with edge going to current node
+                n_to_append = ([n for n in xaif['AIF']['nodes'] if n['nodeID'] in incoming_non_YA])
+                for item in n_to_append:
+                    subgraph_nodes.append(item)
+                next_level_edges = [e for e in xaif['AIF']['edges'] if e['toID'] in incoming_non_YA]
+                ids_from_ra = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in incoming_non_YA]
+                # print("Next level edge from ids: ")
+                # print(next_level_edges_ids)
+                next_level_inode = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in ids_from_ra and n['type'] == "I"]
+
+                next_level_inode_ids = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['nodeID'] in ids_from_ra and n['type'] == "I"]
+
+
+
+                print("edges to append 2:")
+                print([e for e in xaif['AIF']['edges'] if e['fromID'] in next_level_inode_ids and e['toID'] in incoming_non_YA])
+                edges_to_append = [e for e in xaif['AIF']['edges'] if e['fromID'] in next_level_inode_ids and e['toID'] in incoming_non_YA]
+                # edges_to_append_ids = [e['fromID'] for e in xaif['AIF']['edges'] if e['fromID'] in next_level_inode_ids and e['toID'] in incoming_non_YA]
+
+                if edges_to_append != []:
+                    for item in edges_to_append:
+                        subgraph_edges.append(item)
+                edges_to_append = []
+                # print("edges to append 2:")
+                # print([e for e in xaif['AIF']['edges'] if e['fromID'] in next_level_edges_ids and e['fromID'] in next_level_inode_ids])
+
+                # print("------------------------")
+                # print("Inodes next step down: ")
+                # print(next_level_inode)
+                # print("LEN: " + str(len(next_level_inode)))
+
+                if len(next_level_inode) != 0:
+                    for item in next_level_inode:
+                        next_nodes.append(item)
+                if len(next_nodes) != 0:
+                    for item in next_level_inode:
+                        subgraph_nodes.append(item)
+                    # for edge in next_level_edges:
+                    #     print("edges 3:")
+                    #     print(edge)
+                    #     subgraph_edges.append(edge)
+                    current_node = next_nodes[0]
+                    next_nodes.pop(0)
+                else:
+                    break
+                    # for inode in next_level_inode:
+                
+                # print("End of loop status")
+                # print("current node: ")
+                # print(current_node)
+                # print("next nodes: ")
+                # print(next_nodes)
+
+     
+
+        # subgraph
+        
+        # subgraph.append(subgraph_nodes)
+        # subgraph.append(subgraph_edges)
+        # print("Subgraph: ")
+        # print(subgraph)
+        print("subgraph_nodes")
+        print(subgraph_nodes)
+
+        xaif_subgraph = {
+            "AIF": {
+                'nodes': subgraph_nodes,
+                'edges': subgraph_edges
+            }
+        }
+        print(xaif_subgraph)
+
+        subgraphs.append(xaif_subgraph)
+    
+    return subgraphs
+
+
+def raCount(xaif):
+    ra_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'RA']
+    return {"ra_count" : len(ra_nodes)}
+
+
+                        
 
