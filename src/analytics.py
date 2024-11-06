@@ -147,14 +147,21 @@ def arg_word_densities(xaif, verbose=False):
         print("Keys in relation counts: ", relation_counts.keys())
         print("Wordcounts: ", spkr_wordcounts)
         print(relation_counts)
-    for s in relation_counts.keys():
-        if spkr_wordcounts[s] != 0:
+    for s in spkr_wordcounts.keys():
+        if spkr_wordcounts[s] != 0 and s in relation_counts:
             relation_counts[s]['ra_word_density'] = relation_counts[s]['ra_count']/spkr_wordcounts[s]['wordcount']
             relation_counts[s]['ca_word_density'] = relation_counts[s]['ca_count']/spkr_wordcounts[s]['wordcount']
             relation_counts[s]['ma_word_density'] = relation_counts[s]['ma_count']/spkr_wordcounts[s]['wordcount']
             relation_counts[s]['arg_word_density'] = (relation_counts[s]['ra_count'] + relation_counts[s]['ca_count'])/spkr_wordcounts[s]['wordcount']
 
         else:
+            if s not in relation_counts:
+                relation_counts[s] = {}
+
+                relation_counts[s]['ra_count'] = 0
+                relation_counts[s]['ca_count'] = 0
+                relation_counts[s]['ma_count'] = 0
+
             relation_counts[s]['ra_word_density'] = 0
             relation_counts[s]['ca_word_density'] = 0
             relation_counts[s]['ma_word_density'] = 0
