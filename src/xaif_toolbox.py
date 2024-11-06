@@ -232,6 +232,26 @@ def remove_all_meta(xaif: dict, verbose=False) -> dict:
 
     # working_xaif = trim_participants(working_xaif, verbose=verbose)
 
+    # Do it by spotting analysing nodes
+    # Find the tell-tale nodes, analysing YAs:
+    if verbose:
+        print("Now trying directly with nodes!")
+    analysis_yas = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['text'] == 'Analysing' and n['type'] == 'YA']
+    if verbose:
+        print(f"{len(analysis_yas)} Analysing nodes found")
+
+
+    # Note the edges into the analysing node, to find the analyst L-nodes
+    analysis_lsource = [e['toID'] for e in xaif['AIF']['edges'] if e['fromID'] in analysis_yas]
+
+    # Remove edges to and from from the Analysing nodes
+    xaif['AIF']['edges'] = list(filter(lambda x: x['fromID'] not in analysis_yas, xaif['AIF']['edges']))
+    xaif['AIF']['edges'] = list(filter(lambda x: x['toID'] not in analysis_yas, xaif['AIF']['edges']))
+
+    # Remove the analysing YA nodes and analyst L nodes
+    xaif['AIF']['nodes'] = list(filter(lambda x: x['nodeID'] not in analysis_yas, xaif['AIF']['nodes']))
+    xaif['AIF']['nodes'] = list(filter(lambda x: x['nodeID'] not in analysis_lsource, xaif['AIF']['nodes']))
+
     return xaif
 
 
