@@ -4,50 +4,56 @@ from . import analytics
 import sys
 import os
 
-def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
+def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
+    xaif = ova3.ova2_to_ova3(xaif)
+
     # This involves redundancy currently bc all analytics are designed to call the info collection
     # so that they can be run individually with just the XAIF...
 
 
     # Speaker-level analytics
-    analytic_list = []
-    rel_counts = analytics.arg_relation_counts(xaif)
-    # print(rel_counts)
-
-    xaif = ova3.ova2_to_ova3(xaif)
-    #For now skipping thing that don't work/aren't needed for forecast
-    if not skipDialog:
+    if speaker:
         if 'AIF' in xaif.keys():
             wordcounts = ova3.spkr_wordcounts(xaif)
-        analytic_list.append(wordcounts)
-        analytic_list.append(analytics.spkr_loc_counts(xaif))
-        analytic_list.append(analytics.concl_first_perc(xaif))
-        analytic_list.append(analytics.arg_word_densities(xaif))
-        analytic_list.append(analytics.arg_loc_densities(xaif))
-        analytic_list.append(analytics.avg_arg_breadths(xaif))
-        analytic_list.append(analytics.arg_intros(xaif))
-        analytic_list.append(analytics.avg_arg_depths(xaif))
-        analytic_list.append(analytics.direct_args_from_others(xaif))
-        analytic_list.append(analytics.indirect_args_from_others(xaif))
-        analytic_list.append(analytics.ra_in_serial(xaif))
-        analytic_list.append(analytics.ra_in_convergent(xaif))
-        analytic_list.append(analytics.ra_in_divergent(xaif))
-        analytic_list.append(analytics.ra_in_linked(xaif))
-    
-
-        # concl_first = analytics.concl_first_perc(xaif)
-    # if not skipDialog:
-        # arg_densities = analytics.arg_densities(xaif)
-
-
-    if analytic_list != []:
-        for s in rel_counts.keys():
-            # rel_counts[s].update(concl_first[s])
-            for a in analytic_list:
-                rel_counts[s].update(a[s])
+            spkr_analytic_list = []
                 
-    # xaif['analytics'] = rel_counts
+        spkr_rel_counts = analytics.arg_relation_counts(xaif)
 
+        spkr_analytic_list.append(wordcounts)
+        spkr_analytic_list.append(analytics.direct_args_from_others(xaif))
+        spkr_analytic_list.append(analytics.indirect_args_from_others(xaif))
+
+        spkr_analytic_list.append(analytics.loc_counts(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.arg_word_densities(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.arg_loc_densities(xaif, speaker=speaker))
+        
+        spkr_analytic_list.append(analytics.arg_intros(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.concl_first_perc(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.avg_arg_breadths(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.avg_arg_depths(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.ra_in_serial(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.ra_in_convergent(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.ra_in_divergent(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.ra_in_linked(xaif, speaker=speaker))
+    
+        if spkr_analytic_list != []:
+            for s in spkr_rel_counts.keys():
+                # rel_counts[s].update(concl_first[s])
+                for a in spkr_analytic_list:
+                    spkr_rel_counts[s].update(a[s])
+                
+
+    # Global analytics
+    global_analytic_list = []
+    global_analytic_list.append(analytics.map_wordcount(xaif))
+    global_analytic_list.append(analytics.loc_counts(xaif, speaker=False))
+    global_analytic_list.append(analytics.arg_word_densities(xaif, speaker=False))
+    spkr_analytic_list.append(analytics.arg_loc_densities(xaif, speaker=False))
+
+    spkr_analytic_list.append(analytics.ra_in_serial(xaif, speaker=False))
+    spkr_analytic_list.append(analytics.ra_in_convergent(xaif, speaker=False))
+    spkr_analytic_list.append(analytics.ra_in_divergent(xaif, speaker=False))
+    spkr_analytic_list.append(analytics.ra_in_linked(xaif, speaker=False))
 
     #Adding analytics which calculate 'per node'
     if node_level:
@@ -74,10 +80,12 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
         for graph in subgraphs:
             forecast_analytics_list.append(analytics.raCount(graph))
     
+    xaif['analytics'] = {}
+    xaif['analytics']['global'] = global_analytic_list
+
+    if speaker:
+        xaif['analytics'] = {"speaker": spkr_rel_counts}
     
-    xaif['analytics'] = {
-        "speaker": rel_counts
-    }
     if node_level:
         xaif['analytics']['node'] = node_analytic_list
     if forecast:
