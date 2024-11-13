@@ -20,6 +20,7 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
         if 'AIF' in xaif.keys():
             wordcounts = ova3.spkr_wordcounts(xaif)
         analytic_list.append(wordcounts)
+        analytic_list.append(analytics.spkr_loc_counts(xaif))
         analytic_list.append(analytics.concl_first_perc(xaif))
         analytic_list.append(analytics.arg_word_densities(xaif))
         analytic_list.append(analytics.arg_loc_densities(xaif))
@@ -34,9 +35,9 @@ def all_analytics(xaif, node_level=False, skipDialog=False, forecast=False):
         analytic_list.append(analytics.ra_in_linked(xaif))
     
 
-        concl_first = analytics.concl_first_perc(xaif)
-    if not skipDialog:
-        arg_densities = analytics.arg_densities(xaif)
+        # concl_first = analytics.concl_first_perc(xaif)
+    # if not skipDialog:
+        # arg_densities = analytics.arg_densities(xaif)
 
 
     if analytic_list != []:

@@ -101,6 +101,23 @@ def i_from_l_node(l_node_id, all_nodes):
 ######################## 
 
 
+def spkr_loc_counts(xaif, verbose=False):
+    if 'AIF' in xaif.keys():
+        all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+    else:
+        all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
+    
+    # relation_counts = arg_relation_counts(xaif)
+    
+    spkr_loc_counts = {}
+    for s in said.keys():
+        spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
+        spkr_loc_counts[s] = {}
+        spkr_loc_counts[s]['loc_count'] = spkr_locs
+    return spkr_loc_counts
+
+    
+
 def arg_relation_counts(xaif, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
