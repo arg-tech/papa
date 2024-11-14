@@ -798,21 +798,25 @@ def ca_rebut(xaif, speaker=False, verbose=False):
 # Breadth and depth #
 #####################
 
-def initial_arg(ra_id, seen_ras, all_nodes, debug=False):
+def initial_arg(ra_id, seen_ras, all_nodes, speaker=False, debug=False):
     seen_ras = seen_ras + [ra_id]
     
     initial_args = []
 
-    spkr = all_nodes[ra_id]['speaker'][0]
-    spkr_ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA' and spkr in all_nodes[n]['speaker'] and n not in seen_ras]
-
+    if speaker:
+        spkr = all_nodes[ra_id]['speaker'][0]
+        spkr_ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA' and spkr in all_nodes[n]['speaker'] and n not in seen_ras]
+    else:
+        ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA' and n not in seen_ras]
+    
     if debug:
         print(f'Looking for earliest in chain from RA {ra_id}')
         print(f'Have seen the following RAs so far: ', seen_ras)
-        print(f'Associated speaker is {spkr}')
-        print(f'Unseen RAs associated with this speaker: ', spkr_ra_nodes)
-        print(f'All nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker']])
-        print(f'RA nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker'] and all_nodes[n]['type'] == 'RA'])
+        if speaker:
+            print(f'Associated speaker is {spkr}')
+            print(f'Unseen RAs associated with this speaker: ', spkr_ra_nodes)
+            print(f'All nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker']])
+            print(f'RA nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker'] and all_nodes[n]['type'] == 'RA'])
         
 
     # I-nodes premise(s) to this RA
@@ -823,7 +827,11 @@ def initial_arg(ra_id, seen_ras, all_nodes, debug=False):
         print(f"Premises for this RA: ", ra_premises)
 
     for i_premise in ra_premises:
-        ras_in = [n for n in spkr_ra_nodes if all_nodes[n]['nodeID'] in all_nodes[i_premise]['ein'] and all_nodes[n]['type'] == 'RA']
+        if speaker:
+            ras_in = [n for n in spkr_ra_nodes if all_nodes[n]['nodeID'] in all_nodes[i_premise]['ein'] and all_nodes[n]['type'] == 'RA']
+        else:
+            ras_in = [n for n in ra_nodes if all_nodes[n]['nodeID'] in all_nodes[i_premise]['ein'] and all_nodes[n]['type'] == 'RA']
+
         if debug:
             print(f"Checking premise {i_premise}: {all_nodes[i_premise]['text']}")
             print(f"\t{i_premise} has the following RAs in: ", ras_in)
@@ -832,68 +840,110 @@ def initial_arg(ra_id, seen_ras, all_nodes, debug=False):
             initial_args.append(ra_id)
         else:
             for ra in ras_in:
-                initial_args = initial_args + initial_arg(ra, seen_ras, all_nodes)
+                initial_args = initial_args + initial_arg(ra, seen_ras, all_nodes, speaker=speaker)
         if debug:
             print()
 
     # Avoid repeats
     return list(set(initial_args))
 
-def path_lens_from_arg(ra_id, all_nodes, verbose=False):
-    target_spkr = all_nodes[ra_id]['speaker'][0]
+def path_lens_from_arg(ra_id, all_nodes, speaker=False, verbose=False):
+    if speaker:
+        target_spkr = all_nodes[ra_id]['speaker'][0]
     i_node_concls = [n for n in all_nodes if ra_id in all_nodes[n]['ein'] 
                      and all_nodes[n]['type'] == 'I']
     
     path_list = []
 
     for i_concl in i_node_concls:
-        ras_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
-                   and all_nodes[n]['type'] == 'RA' 
-                   and all_nodes[n]['speaker'][0] == target_spkr]
+        if speaker:
+            ras_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
+                    and all_nodes[n]['type'] == 'RA' 
+                    and all_nodes[n]['speaker'][0] == target_spkr]
+        else:
+            ras_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
+                    and all_nodes[n]['type'] == 'RA']
         if len(ras_out) == 0:
             path_list.append(1)
         else:
             for ra_out in ras_out:
-                path_list = path_list + [x + 1 for x in path_lens_from_arg(ra_out, all_nodes)]
+                path_list = path_list + [x + 1 for x in path_lens_from_arg(ra_out, all_nodes, speaker=speaker)]
                 # path_list = path_list + path_lens_from_arg(ra_out, all_nodes).apply(lambda x: x + 1)
     
     return path_list
 
 
-def arg_depths(xaif, verbose=False):
+def arg_depths(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
     ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
 
-    # Per speaker
     ra_depths = {}
-    
-    for spkr in said:
-        if verbose:
-            print("Checking speaker ", spkr)
-        ra_depths[spkr] = {'arg_depths': []}
 
-        # Get starters (but this ignores any circular args)
-        spkr_starts = []
-        
-        # All RAs anchored by spkr's locs
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+    if speaker:
+        # Per speaker
+        for spkr in said:
+            if verbose:
+                print("Checking speaker ", spkr)
+            ra_depths[spkr] = {'arg_depths': []}
 
-        # get all starts (this is ugly/inefficient but oh well)
-        for ra in spkr_ra_all:
-            spkr_starts += initial_arg(ra, [], all_nodes, debug=verbose)
-        spkr_starts = list(set(spkr_starts))
-        
+            # Get starters (but this ignores any circular args)
+            spkr_starts = []
+            
+            # All RAs anchored by spkr's locs
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+
+            # get all starts (this is ugly/inefficient but oh well)
+            for ra in spkr_ra_all:
+                spkr_starts += initial_arg(ra, [], all_nodes, speaker=speaker, debug=verbose)
+            spkr_starts = list(set(spkr_starts))
+            
+            # Follow each argument path from the first RAs in each path
+            for starter_arg in spkr_starts:
+                if verbose:
+                    print("Looking for argument ", starter_arg)
+                ra_depths[spkr]['arg_depths'] = ra_depths[spkr]['arg_depths'] + path_lens_from_arg(starter_arg, all_nodes, speaker=speaker, verbose=verbose)
+
+    else:
+        ra_depths['arg_depths'] = []
+        # Get starters
+        starts = []
+        for ra in ra_nodes:
+            starts += initial_arg(ra, [], all_nodes, speaker=speaker, debug=verbose)
+        starts = list(set(starts))
+
         # Follow each argument path from the first RAs in each path
-        for starter_arg in spkr_starts:
+        for starter_arg in starts:
             if verbose:
                 print("Looking for argument ", starter_arg)
-            ra_depths[spkr]['arg_depths'] = ra_depths[spkr]['arg_depths'] + path_lens_from_arg(starter_arg, all_nodes, verbose=verbose)
+            ra_depths['arg_depths'] = ra_depths['arg_depths'] + path_lens_from_arg(starter_arg, all_nodes, speaker=speaker, verbose=verbose)
 
     return ra_depths
 
+def max_ra_chain(xaif, speaker=False, verbose=False):
+    all_depths = arg_depths(xaif, speaker=speaker, verbose=verbose)
+    if speaker:
+        max_ra = {}
+        for spkr in all_depths:
+            max_ra[spkr] = {}
+            if len(all_depths[spkr]['arg_depths']) > 0:
+                max_ra[spkr]['max_ra_chain'] = max(all_depths[spkr]['arg_depths'])
+            else:
+                max_ra[spkr]['max_ra_chain'] = 0
+        return max_ra 
+    else:
+        if len(all_depths['arg_depths']) > 0:
+            return {'max_ra_chain': max(all_depths['arg_depths'])}
+        else:
+            return {'max_ra_chain': 0}
+
+def ca_depths(xaif, verbose=False):
+    pass
+
+def max_ca_chain(xaif, speaker=False, verbose=False):
+    pass
 
 def arg_breadths(xaif, debug=False):
     if 'AIF' in xaif.keys():
