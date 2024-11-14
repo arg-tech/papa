@@ -142,7 +142,7 @@ def loc_counts(xaif, speaker=False, verbose=False):
 
         # Cut any l-nodes with an incoming YA: will be reported speech
         # i.e. only keep l-nodes *without* a YA node among their incoming nodes
-        l_orig_nodes = [n for n in l_nodes if not (set(all_nodes[n]['ein']).intersection(set(ya_nodes)))]
+        l_orig_nodes = [n for n in l_nodes if not set(all_nodes[n]['ein']).intersection(set(ya_nodes))]
 
         loc_counts = {'loc_count': len(l_orig_nodes)}
         return loc_counts
@@ -748,6 +748,50 @@ def conflict_self(xaif, debug=False):
 
 def circular_args(xaif):
     pass
+
+
+def ca_undercut(xaif, speaker=False, verbose=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+
+    ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+
+    undercut_count = {}
+    if speaker:
+        for spkr in said:
+            undercut_count[spkr] = {}
+            spkr_ca_nodes = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
+            undercutting = [n for n in spkr_ca_nodes if set(all_nodes[n]['eout']).intersection(ra_nodes)]
+            undercut_count[spkr]['undercut_count'] = len(undercutting)
+
+    else:    
+        # is an undercutter if its edges out include an edge to an RA
+        undercutting = [n for n in ca_nodes if set(all_nodes[n]['eout']).intersection(ra_nodes)]
+        undercut_count['undercut_count'] = len(undercutting)
+    
+    return undercut_count
+
+
+def ca_rebut(xaif, speaker=False, verbose=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+
+    ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I']
+
+    rebut_count = {}
+    if speaker:
+        for spkr in said:
+            rebut_count[spkr] = {}
+            spkr_ca_nodes = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
+            rebutting = [n for n in spkr_ca_nodes if set(all_nodes[n]['eout']).intersection(i_nodes)]
+            rebut_count[spkr]['rebut_count'] = len(rebutting)
+
+    else:    
+        # is a rebutter if its edges out include an edge to an I
+        rebutting = [n for n in ca_nodes if set(all_nodes[n]['eout']).intersection(i_nodes)]
+        rebut_count['rebut_count'] = len(rebutting)
+    
+    return rebut_count
 
 
 #####################
