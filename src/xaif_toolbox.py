@@ -290,7 +290,7 @@ def add_edge_info(xaif, all_nodes):
 
 
 # also adds locution associations to i-nodes
-def add_speakers(all_nodes):
+def add_speakers(all_nodes, verbose=False):
     said = {}
 
     for n in [n for n in all_nodes if all_nodes[n]['type'] == 'L']:
@@ -328,6 +328,8 @@ def add_speakers(all_nodes):
                             said[spkr].append(all_nodes[ya_out]['nodeID'])
                             all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
         # Reported speech: I-node should be attributed to the quoting speaker
+                            
+            
         else:
             # Get quoting speaker
             quoter = reporting_speaker(n, all_nodes)
@@ -342,8 +344,7 @@ def add_speakers(all_nodes):
                             
                             all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
 
-
-
+    # Meeds cleaning/merging with following chunk, but leaving as is for now
     # Get TA speakers
     for n in [n for n in all_nodes if all_nodes[n]['type'] == 'TA']:
         for e_in in all_nodes[n]['ein']:
@@ -372,19 +373,10 @@ def add_speakers(all_nodes):
                                         said[spkr].append(all_nodes[i_out]['nodeID'])
                                     else:
                                         said[spkr] = all_nodes[i_out]['nodeID']
+                                        
 
         # Adding speaker attribution to arg relations based on speaker of L-nodes descended from the anchoring TA
         # Requires update: original doesn't trace back in case of reported speech
-        for ta_out in all_nodes[n]['eout']:
-            # speakers of L-nodes descended from this TA
-            # l_spkrs = [all_nodes[l]['speaker'] for l in all_nodes[n]['eout'] if all_nodes[l]['type'] == 'L']
-            l_spkrs = [s for l in all_nodes[n]['eout'] if all_nodes[l]['type'] == 'L' for s in all_nodes[l]['speaker']]
-            if all_nodes[ta_out]['type'] == 'YA':
-                for ya_out in all_nodes[ta_out]['eout']:
-                    if all_nodes[ya_out]['type'] == 'RA' or 'CA' or 'MA':
-                        all_nodes[ya_out]['speaker'] = l_spkrs
-
-        # # Adding speaker attribution to arg relations based on speaker of L-nodes descended from the anchoring TA
         # for ta_out in all_nodes[n]['eout']:
         #     # speakers of L-nodes descended from this TA
         #     # l_spkrs = [all_nodes[l]['speaker'] for l in all_nodes[n]['eout'] if all_nodes[l]['type'] == 'L']
@@ -393,7 +385,54 @@ def add_speakers(all_nodes):
         #         for ya_out in all_nodes[ta_out]['eout']:
         #             if all_nodes[ya_out]['type'] == 'RA' or 'CA' or 'MA':
         #                 all_nodes[ya_out]['speaker'] = l_spkrs
-                            
+
+
+    # Assign TA speakers
+    for n in [n for n in all_nodes if all_nodes[n]['type'] == 'TA']:
+        # (If well-formed this L list should have exactly one entry)
+        l_out = [l for l in all_nodes[n]['eout'] if all_nodes[l]['type'] == 'L']
+        spkrs = []
+        for l in l_out:
+            spkrs = spkrs + all_nodes[l]['speaker']
+        all_nodes[n]['speaker'] = list(set(spkrs))
+
+    # Get YA speakers: the speaker of any L or TA that anchors the YA
+    for n in [n for n in all_nodes if all_nodes[n]['type'] == 'YA']:
+        if verbose:
+            print(f"\nAttributing {all_nodes[n]['text']} YA {n}")
+        # Check each incoming node to the YA that is a TA or L
+        for e in [e for e in all_nodes[n]['ein'] if all_nodes[e]['type'] in ['L', 'TA']]:
+            all_nodes[n]['speaker'] = all_nodes[n]['speaker'] + all_nodes[e]['speaker']
+        all_nodes[n]['speaker'] = list(set(all_nodes[n]['speaker']))
+
+        
+    # Add speaker attribution to arg relations on basis of anchoring YA
+    # Requires update: doesn't trace back in case of reported speech
+    for n in [n for n in all_nodes if all_nodes[n]['type'] in ['RA', 'CA', 'MA']]:
+
+        ya_in = [ya for ya in all_nodes[n]['ein'] if all_nodes[ya]['type'] == 'YA']
+        if verbose:
+            print(f"\nChecking {all_nodes[n]['type']}-node {n}")
+            print(f"Anchored by YA(s): ", ya_in)
+            for y in ya_in:
+                print(f"\t{y}\t{all_nodes[y]['text']}")
+
+        if len(ya_in) == 0:
+            print(f"Unanchored {all_nodes[n]['type']}-node: {n}")
+        elif len(ya_in) == 1:
+            all_nodes[n]['speaker'] = all_nodes[ya_in[0]]['speaker']
+            if verbose:
+                print(f"List ya_in:", ya_in)
+                print(all_nodes[ya_in[0]])
+
+                print(f"\tJust one YA, attributed as:", all_nodes[ya_in[0]]['speaker'])
+                print(f"\tAttributing {n} to ", all_nodes[n]['speaker'])
+        else:
+            all_spkrs = []
+            for ya in ya_in:
+                all_spkrs = all_spkrs + all_nodes[ya]['speaker']
+            all_nodes[n]['speaker'] = list(set(all_spkrs))
+            
     
     return all_nodes, said
 
@@ -523,7 +562,7 @@ def spkr_wordcounts(xaif, verbose=False):
     return spkr_wordcounts
 
 
-def xaif_preanalytic_info_collection(xaif):
+def xaif_preanalytic_info_collection(xaif, verbose=False):
     
     # Cut meta content first
     xaif = ova2_to_ova3(xaif)
@@ -532,7 +571,7 @@ def xaif_preanalytic_info_collection(xaif):
     all_nodes = node_setup(xaif)
     all_nodes = add_edge_info(xaif, all_nodes)
 
-    all_nodes, said = add_speakers(all_nodes)
+    all_nodes, said = add_speakers(all_nodes, verbose=verbose)
     all_nodes = add_assumed_speakers(all_nodes)
     all_nodes = add_agreement(all_nodes)
 
