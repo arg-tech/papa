@@ -110,6 +110,45 @@ def map_wordcount(xaif):
         return {'wordcount': len(text.split())}
 
 
+# Wordcounts from L-nodes only, excluding whatever comes before first colon
+# (assumed to be speaker name)
+def loc_wordcount(xaif, speaker=False, verbose=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+    l_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'L']
+    
+    loc_wordcounts = {}
+    if speaker:
+        for spkr in said.keys():
+            loc_wordcounts[spkr] = {}
+            spkr_l_nodes = [n for n in l_nodes if spkr in all_nodes[n]['speaker']]
+            wordcount = 0
+            for l in spkr_l_nodes:
+                splits = all_nodes[l]['text'].split(':')
+                if len(splits) > 2:
+                    print(f"L-node {l} cannot be split on ':'")
+                text = ' '.join(splits[1:])
+                if verbose:
+                    print(f"{len(text.split())}: {all_nodes[l]['text']}")
+
+                wordcount += len(text.split())
+            loc_wordcounts[spkr]['loc_wordcount'] = wordcount
+    
+    else:
+        wordcount = 0
+        for l in l_nodes:
+            splits = all_nodes[l]['text'].split(':')
+            if len(splits) > 2:
+                print(f"L-node {l} cannot be split on ':'")
+            text = ' '.join(splits[1:])
+            wordcount += len(text.split())
+            if verbose:
+                print(f"{len(text.split())}: {all_nodes[l]['text']}")
+        loc_wordcounts['loc_wordcount'] = wordcount
+    
+    return loc_wordcounts
+
+
+
 def loc_counts(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
@@ -149,19 +188,27 @@ def loc_counts(xaif, speaker=False, verbose=False):
 
 
 
-def arg_relation_counts(xaif, speaker=False, verbose=False):
+def arg_relation_counts(xaif, speaker=False, verbose=False, skip_altgive=False):
     relation_counts = {}
+    if 'AIF' in xaif.keys():
+        all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+    else:
+        all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
+
+    ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+    ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    ma_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'MA']
+
+    # remove any CAs anchored by Alternative Giving
+    if skip_altgive:
+        alt_gives = [n for n in all_nodes 
+                        if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == 'Alternative Giving']
+        if verbose:
+            print(f"Alt-giving nodes: ", alt_gives)
+        # Remove any CAs with an incoming edge from an Alternative Giving node
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(alt_gives)]
 
     if speaker:
-        if 'AIF' in xaif.keys():
-            all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
-        else:
-            all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
-
-        ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
-        ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
-        ma_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'MA']
-
         if verbose:
             print(f"{len(ra_nodes)} RAs found")
             print(f"{len(ca_nodes)} CAs found")
@@ -178,12 +225,6 @@ def arg_relation_counts(xaif, speaker=False, verbose=False):
             relation_counts[spkr]['ma_count'] = len(spkr_ma_all)
 
     else:
-        xaif = ova3.ova2_to_ova3(xaif)
-        
-        ra_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'RA']
-        ca_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'CA']
-        ma_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'MA']
-        
         relation_counts['ra_count'] = len(ra_nodes)
         relation_counts['ca_count'] = len(ca_nodes)
         relation_counts['ma_count'] = len(ma_nodes)
