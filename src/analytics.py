@@ -231,9 +231,9 @@ def arg_relation_counts(xaif, speaker=False, verbose=False, skip_altgive=False):
 
     return relation_counts
 
-
-def arg_word_densities(xaif, speaker=False, verbose=False):
-    relation_counts = arg_relation_counts(xaif, speaker=speaker)
+# Density based on textfield wordcount
+def arg_word_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+    relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
 
     if speaker:
         if 'AIF' in xaif.keys():
@@ -246,7 +246,7 @@ def arg_word_densities(xaif, speaker=False, verbose=False):
             print("Wordcounts: ", spkr_wordcounts)
             print(relation_counts)
         for s in spkr_wordcounts.keys():
-            if spkr_wordcounts[s] != 0 and s in relation_counts:
+            if spkr_wordcounts[s]['wordcount'] != 0 and s in relation_counts:
                 relation_counts[s]['ra_word_density'] = relation_counts[s]['ra_count']/spkr_wordcounts[s]['wordcount']
                 relation_counts[s]['ca_word_density'] = relation_counts[s]['ca_count']/spkr_wordcounts[s]['wordcount']
                 relation_counts[s]['ma_word_density'] = relation_counts[s]['ma_count']/spkr_wordcounts[s]['wordcount']
@@ -280,9 +280,9 @@ def arg_word_densities(xaif, speaker=False, verbose=False):
 
     return relation_counts
 
-
-def arg_loc_densities(xaif, speaker=False, verbose=False):
-    relation_counts = arg_relation_counts(xaif, speaker=speaker)
+# Density based on number of locutions
+def arg_loc_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+    relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
     l_counts = loc_counts(xaif, speaker=speaker)
 
     # if 'AIF' in xaif.keys():
@@ -319,6 +319,53 @@ def arg_loc_densities(xaif, speaker=False, verbose=False):
             relation_counts['ca_loc_density'] = 0
             relation_counts['ma_loc_density'] = 0
             relation_counts['arg_loc_density'] = 0
+
+    return relation_counts
+
+
+# Density relative to wordcount from locutions
+def arg_locword_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+    relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
+
+    if speaker:
+        spkr_wordcounts = loc_wordcount(xaif, speaker=True)
+
+        if verbose:
+            print("Keys in relation counts: ", relation_counts.keys())
+            print("L-node wordcounts: ", spkr_wordcounts)
+            print(relation_counts)
+        for s in spkr_wordcounts.keys():
+            if spkr_wordcounts[s]['loc_wordcount'] != 0 and s in relation_counts:
+                relation_counts[s]['ra_locword_density'] = relation_counts[s]['ra_count']/spkr_wordcounts[s]['loc_wordcount']
+                relation_counts[s]['ca_locword_density'] = relation_counts[s]['ca_count']/spkr_wordcounts[s]['loc_wordcount']
+                relation_counts[s]['ma_locword_density'] = relation_counts[s]['ma_count']/spkr_wordcounts[s]['loc_wordcount']
+                relation_counts[s]['arg_locword_density'] = (relation_counts[s]['ra_count'] + relation_counts[s]['ca_count'])/spkr_wordcounts[s]['loc_wordcount']
+
+            else:
+                if s not in relation_counts:
+                    relation_counts[s] = {}
+
+                    relation_counts[s]['ra_count'] = 0
+                    relation_counts[s]['ca_count'] = 0
+                    relation_counts[s]['ma_count'] = 0
+
+                relation_counts[s]['ra_locword_density'] = 0
+                relation_counts[s]['ca_locword_density'] = 0
+                relation_counts[s]['ma_locword_density'] = 0
+                relation_counts[s]['arg_locword_density'] = 0
+        
+    else:
+        wordcount = loc_wordcount(xaif, speaker=False)['loc_wordcount']
+        if wordcount != 0:
+            relation_counts['ra_locword_density'] = relation_counts['ra_count']/wordcount
+            relation_counts['ca_locword_density'] = relation_counts['ca_count']/wordcount
+            relation_counts['ma_locword_density'] = relation_counts['ma_count']/wordcount
+            relation_counts['arg_locword_density'] = (relation_counts['ra_count'] + relation_counts['ca_count'])/wordcount
+        else:
+            relation_counts['ra_locword_density'] = 0
+            relation_counts['ca_locword_density'] = 0
+            relation_counts['ma_locword_density'] = 0
+            relation_counts['arg_locword_density'] = 0
 
     return relation_counts
 
