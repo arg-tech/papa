@@ -860,10 +860,14 @@ def ca_undercut(xaif, speaker=False, verbose=False):
     return undercut_count
 
 
-def ca_rebut(xaif, speaker=False, verbose=False):
+def ca_rebut(xaif, speaker=False, verbose=False, skip_altgive=False):
     all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
 
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    if skip_altgive:
+        alt_give_yas = [n for n in all_nodes if all_nodes[n]['text'] == 'Alternative Giving' and all_nodes[n]['type'] == 'YA']
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(set(alt_give_yas))]
+
     i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I']
 
     rebut_count = {}
@@ -1093,7 +1097,7 @@ def max_ca_chain(xaif, speaker=False, verbose=False):
         return max_ca 
     else:
         if len(all_depths['ca_depths']) > 0:
-            return {'max_ca_chain': max(all_depths['arg_depths'])}
+            return {'max_ca_chain': max(all_depths['ca_depths'])}
         else:
             return {'max_ca_chain': 0}
 
