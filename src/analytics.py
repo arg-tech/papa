@@ -1584,12 +1584,12 @@ def addForecastAccuracy(xaif):
         match = re.search(r"Part ID: ?\d+", xaif['text'])
         match_span = match.span()
         id = match.string[8:match_span[1]]
-        with open ('forecast750_accuracyscores.csv', 'r') as file:
+        with open ('forecast750_brier.csv', 'r') as file:
             csvfile = csv.reader(file)
             for line in csvfile:
                 if line[0] == id:
-                    if line[11] != "unknown":
-                        return {"accuracy": line[11]}
+                    if line[16] != "unknown":
+                        return {"accuracy": line[16]}
                     else:
                         return {"accuracy": "unknown"}
     except:
@@ -1601,16 +1601,16 @@ def addNodeOutcomes(xaif):
     id = match.string[8:match_span[1]]
     index = 0
 
-    with open ('forecast750_accuracyscores.csv', 'r') as file:
+    with open ('forecast750_brier.csv', 'r') as file:
         node_outcomes = []
         csvfile = csv.reader(file)
         for line in csvfile:
             if line[0] == id:
                 probability_list = []
-                items = line[8][1:-1].split(',')
+                items = line[9][1:-1].split(',')
                 probability_list.extend(items)
                 outcome_list = []
-                items = line[10][1:-1].split(',')
+                items = line[11][1:-1].split(',')
                 outcome_list.extend(items)
                 inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
                 for inode in inodes:
