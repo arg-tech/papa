@@ -48,12 +48,12 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytic_list.append(analytics.map_wordcount(xaif))
     global_analytic_list.append(analytics.loc_counts(xaif, speaker=False))
     global_analytic_list.append(analytics.arg_word_densities(xaif, speaker=False))
-    spkr_analytic_list.append(analytics.arg_loc_densities(xaif, speaker=False))
+    global_analytic_list.append(analytics.arg_loc_densities(xaif, speaker=False))
 
-    spkr_analytic_list.append(analytics.ra_in_serial(xaif, speaker=False))
-    spkr_analytic_list.append(analytics.ra_in_convergent(xaif, speaker=False))
-    spkr_analytic_list.append(analytics.ra_in_divergent(xaif, speaker=False))
-    spkr_analytic_list.append(analytics.ra_in_linked(xaif, speaker=False))
+    global_analytic_list.append(analytics.ra_in_serial(xaif, speaker=False))
+    global_analytic_list.append(analytics.ra_in_convergent(xaif, speaker=False))
+    global_analytic_list.append(analytics.ra_in_divergent(xaif, speaker=False))
+    global_analytic_list.append(analytics.ra_in_linked(xaif, speaker=False))
 
     #Adding analytics which calculate 'per node'
     if node_level:
