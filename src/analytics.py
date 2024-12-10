@@ -100,90 +100,273 @@ def i_from_l_node(l_node_id, all_nodes):
 # Counts and densities #
 ######################## 
 
+# Unrefined return of text field wordcount
+def map_wordcount(xaif):
+        text = xaif['text']
+        # Remove char codes and tags
+        text = re.sub("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});", '', text)
 
-def arg_relation_counts(xaif, verbose=False):
+        text = text.replace('\n', ' ')
+        return {'wordcount': len(text.split())}
+
+
+# Wordcounts from L-nodes only, excluding whatever comes before first colon
+# (assumed to be speaker name)
+def loc_wordcount(xaif, speaker=False, verbose=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+    l_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'L']
+    
+    loc_wordcounts = {}
+    if speaker:
+        for spkr in said.keys():
+            loc_wordcounts[spkr] = {}
+            spkr_l_nodes = [n for n in l_nodes if spkr in all_nodes[n]['speaker']]
+            wordcount = 0
+            for l in spkr_l_nodes:
+                splits = all_nodes[l]['text'].split(':')
+                if len(splits) > 2:
+                    print(f"L-node {l} cannot be split on ':'")
+                text = ' '.join(splits[1:])
+                if verbose:
+                    print(f"{len(text.split())}: {all_nodes[l]['text']}")
+
+                wordcount += len(text.split())
+            loc_wordcounts[spkr]['loc_wordcount'] = wordcount
+    
+    else:
+        wordcount = 0
+        for l in l_nodes:
+            splits = all_nodes[l]['text'].split(':')
+            if len(splits) > 2:
+                print(f"L-node {l} cannot be split on ':'")
+            text = ' '.join(splits[1:])
+            wordcount += len(text.split())
+            if verbose:
+                print(f"{len(text.split())}: {all_nodes[l]['text']}")
+        loc_wordcounts['loc_wordcount'] = wordcount
+    
+    return loc_wordcounts
+
+
+
+def loc_counts(xaif, speaker=False, verbose=False):
+    if 'AIF' in xaif.keys():
+        all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+    else:
+        all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
+    
+    # relation_counts = arg_relation_counts(xaif)
+    
+    if speaker:
+        spkr_loc_counts = {}
+        for s in said.keys():
+            spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
+            spkr_loc_counts[s] = {}
+            spkr_loc_counts[s]['loc_count'] = spkr_locs
+        return spkr_loc_counts
+    else: # Avoiding any reported speech: assumes meta-nodes for analysis have been removed
+        # get all YA and L nodes
+        ya_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'YA']
+        l_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'L']
+        
+        if verbose:
+            print(f"{len(ya_nodes)} YA-nodes:", ya_nodes)
+            print(f"{len(l_nodes)} L-nodes:", l_nodes)
+            for l in l_nodes:
+                print(f"L-node {l} incoming:")
+                for n in all_nodes[l]['ein']:
+                    print(f"\t{n}")
+                    if not (set(all_nodes[n]['ein']).intersection(set(ya_nodes))):
+                        print('\tNo intersection with YAs')
+
+        # Cut any l-nodes with an incoming YA: will be reported speech
+        # i.e. only keep l-nodes *without* a YA node among their incoming nodes
+        l_orig_nodes = [n for n in l_nodes if not set(all_nodes[n]['ein']).intersection(set(ya_nodes))]
+
+        loc_counts = {'loc_count': len(l_orig_nodes)}
+        return loc_counts
+
+
+
+def arg_relation_counts(xaif, speaker=False, verbose=False, skip_altgive=False):
+    relation_counts = {}
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
+
     ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
     ma_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'MA']
 
-    if verbose:
-        print(f"{len(ra_nodes)} RAs found")
-        print(f"{len(ca_nodes)} CAs found")
-        print(f"{len(ma_nodes)} MAs found")
-        print("Speakers in 'said': ", list(said.keys()))
+    # remove any CAs anchored by Alternative Giving
+    if skip_altgive:
+        alt_gives = [n for n in all_nodes 
+                        if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == 'Alternative Giving']
+        if verbose:
+            print(f"Alt-giving nodes: ", alt_gives)
+        # Remove any CAs with an incoming edge from an Alternative Giving node
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(alt_gives)]
 
-    relation_counts = {}
+    if speaker:
+        if verbose:
+            print(f"{len(ra_nodes)} RAs found")
+            print(f"{len(ca_nodes)} CAs found")
+            print(f"{len(ma_nodes)} MAs found")
+            print("Speakers in 'said': ", list(said.keys()))
+        for spkr in said:
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+            spkr_ca_all = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
+            spkr_ma_all = [n for n in ma_nodes if spkr in all_nodes[n]['speaker']]
+            
+            relation_counts[spkr] = {}
+            relation_counts[spkr]['ra_count'] = len(spkr_ra_all)
+            relation_counts[spkr]['ca_count'] = len(spkr_ca_all)
+            relation_counts[spkr]['ma_count'] = len(spkr_ma_all)
 
-    for spkr in said:
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
-        spkr_ca_all = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
-        spkr_ma_all = [n for n in ma_nodes if spkr in all_nodes[n]['speaker']]
+    else:
+        relation_counts['ra_count'] = len(ra_nodes)
+        relation_counts['ca_count'] = len(ca_nodes)
+        relation_counts['ma_count'] = len(ma_nodes)
+
+    return relation_counts
+
+# Density based on textfield wordcount
+def arg_word_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+    relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
+
+    if speaker:
+        if 'AIF' in xaif.keys():
+            spkr_wordcounts = ova3.spkr_wordcounts(xaif)
+        else:
+            spkr_wordcounts = ova2.spkr_wordcounts(xaif)
+
+        if verbose:
+            print("Keys in relation counts: ", relation_counts.keys())
+            print("Wordcounts: ", spkr_wordcounts)
+            print(relation_counts)
+        for s in spkr_wordcounts.keys():
+            if spkr_wordcounts[s]['wordcount'] != 0 and s in relation_counts:
+                relation_counts[s]['ra_word_density'] = relation_counts[s]['ra_count']/spkr_wordcounts[s]['wordcount']
+                relation_counts[s]['ca_word_density'] = relation_counts[s]['ca_count']/spkr_wordcounts[s]['wordcount']
+                relation_counts[s]['ma_word_density'] = relation_counts[s]['ma_count']/spkr_wordcounts[s]['wordcount']
+                relation_counts[s]['arg_word_density'] = (relation_counts[s]['ra_count'] + relation_counts[s]['ca_count'])/spkr_wordcounts[s]['wordcount']
+
+            else:
+                if s not in relation_counts:
+                    relation_counts[s] = {}
+
+                    relation_counts[s]['ra_count'] = 0
+                    relation_counts[s]['ca_count'] = 0
+                    relation_counts[s]['ma_count'] = 0
+
+                relation_counts[s]['ra_word_density'] = 0
+                relation_counts[s]['ca_word_density'] = 0
+                relation_counts[s]['ma_word_density'] = 0
+                relation_counts[s]['arg_word_density'] = 0
         
-        relation_counts[spkr] = {}
-        relation_counts[spkr]['ra_count'] = len(spkr_ra_all)
-        relation_counts[spkr]['ca_count'] = len(spkr_ca_all)
-        relation_counts[spkr]['ma_count'] = len(spkr_ma_all)
+    else:
+        wordcount = map_wordcount(xaif)['wordcount']
+        if wordcount != 0:
+            relation_counts['ra_word_density'] = relation_counts['ra_count']/wordcount
+            relation_counts['ca_word_density'] = relation_counts['ca_count']/wordcount
+            relation_counts['ma_word_density'] = relation_counts['ma_count']/wordcount
+            relation_counts['arg_word_density'] = (relation_counts['ra_count'] + relation_counts['ca_count'])/wordcount
+        else:
+            relation_counts['ra_word_density'] = 0
+            relation_counts['ca_word_density'] = 0
+            relation_counts['ma_word_density'] = 0
+            relation_counts['arg_word_density'] = 0
+
+    return relation_counts
+
+# Density based on number of locutions
+def arg_loc_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+    relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
+    l_counts = loc_counts(xaif, speaker=speaker)
+
+    # if 'AIF' in xaif.keys():
+    #     all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
+    # else:
+    #     all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
     
+    if speaker:
+        if verbose:
+            print("Speakers listed in relation_counts:", list(relation_counts.keys()))
+
+        for s in relation_counts.keys():
+            # spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
+            spkr_locs = l_counts[s]['loc_count']
+
+            if spkr_locs != 0:
+                relation_counts[s]['ra_loc_density'] = relation_counts[s]['ra_count']/spkr_locs
+                relation_counts[s]['ca_loc_density'] = relation_counts[s]['ca_count']/spkr_locs
+                relation_counts[s]['ma_loc_density'] = relation_counts[s]['ma_count']/spkr_locs
+                relation_counts[s]['arg_loc_density'] = (relation_counts[s]['ra_count'] + relation_counts[s]['ca_count'])/spkr_locs
+            else:
+                relation_counts[s]['ra_loc_density'] = 0
+                relation_counts[s]['ca_loc_density'] = 0
+                relation_counts[s]['ma_loc_density'] = 0
+                relation_counts[s]['arg_loc_density'] = 0
+    else:
+        if l_counts['loc_count'] != 0:
+            relation_counts['ra_loc_density'] = relation_counts['ra_count']/l_counts['loc_count']
+            relation_counts['ca_loc_density'] = relation_counts['ca_count']/l_counts['loc_count']
+            relation_counts['ma_loc_density'] = relation_counts['ma_count']/l_counts['loc_count']
+            relation_counts['arg_loc_density'] = (relation_counts['ra_count'] + relation_counts['ca_count'])/l_counts['loc_count']
+        else:
+            relation_counts['ra_loc_density'] = 0
+            relation_counts['ca_loc_density'] = 0
+            relation_counts['ma_loc_density'] = 0
+            relation_counts['arg_loc_density'] = 0
+
     return relation_counts
 
 
-def arg_word_densities(xaif, verbose=False):
-    relation_counts = arg_relation_counts(xaif)
-    if 'AIF' in xaif.keys():
-        spkr_wordcounts = ova3.spkr_wordcounts(xaif)
+# Density relative to wordcount from locutions
+def arg_locword_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+    relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
+
+    if speaker:
+        spkr_wordcounts = loc_wordcount(xaif, speaker=True)
+
+        if verbose:
+            print("Keys in relation counts: ", relation_counts.keys())
+            print("L-node wordcounts: ", spkr_wordcounts)
+            print(relation_counts)
+        for s in spkr_wordcounts.keys():
+            if spkr_wordcounts[s]['loc_wordcount'] != 0 and s in relation_counts:
+                relation_counts[s]['ra_locword_density'] = relation_counts[s]['ra_count']/spkr_wordcounts[s]['loc_wordcount']
+                relation_counts[s]['ca_locword_density'] = relation_counts[s]['ca_count']/spkr_wordcounts[s]['loc_wordcount']
+                relation_counts[s]['ma_locword_density'] = relation_counts[s]['ma_count']/spkr_wordcounts[s]['loc_wordcount']
+                relation_counts[s]['arg_locword_density'] = (relation_counts[s]['ra_count'] + relation_counts[s]['ca_count'])/spkr_wordcounts[s]['loc_wordcount']
+
+            else:
+                if s not in relation_counts:
+                    relation_counts[s] = {}
+
+                    relation_counts[s]['ra_count'] = 0
+                    relation_counts[s]['ca_count'] = 0
+                    relation_counts[s]['ma_count'] = 0
+
+                relation_counts[s]['ra_locword_density'] = 0
+                relation_counts[s]['ca_locword_density'] = 0
+                relation_counts[s]['ma_locword_density'] = 0
+                relation_counts[s]['arg_locword_density'] = 0
+        
     else:
-        spkr_wordcounts = ova2.spkr_wordcounts(xaif)
-
-
-    # print("Relation count speakers:")
-    # print(relation_counts.keys())
-    # print("\nWordcount speakers")
-    # print(spkr_wordcounts.keys())
-
-    if verbose:
-        print("Keys in relation counts: ", relation_counts.keys())
-        print("Wordcounts: ", spkr_wordcounts)
-        print(relation_counts)
-    for s in relation_counts.keys():
-        if spkr_wordcounts[s] != 0:
-            relation_counts[s]['ra_word_density'] = relation_counts[s]['ra_count']/spkr_wordcounts[s]['wordcount']
-            relation_counts[s]['ca_word_density'] = relation_counts[s]['ca_count']/spkr_wordcounts[s]['wordcount']
-            relation_counts[s]['ma_word_density'] = relation_counts[s]['ma_count']/spkr_wordcounts[s]['wordcount']
-            relation_counts[s]['arg_word_density'] = (relation_counts[s]['ra_count'] + relation_counts[s]['ca_count'])/spkr_wordcounts[s]['wordcount']
-
+        wordcount = loc_wordcount(xaif, speaker=False)['loc_wordcount']
+        if wordcount != 0:
+            relation_counts['ra_locword_density'] = relation_counts['ra_count']/wordcount
+            relation_counts['ca_locword_density'] = relation_counts['ca_count']/wordcount
+            relation_counts['ma_locword_density'] = relation_counts['ma_count']/wordcount
+            relation_counts['arg_locword_density'] = (relation_counts['ra_count'] + relation_counts['ca_count'])/wordcount
         else:
-            relation_counts[s]['ra_word_density'] = 0
-            relation_counts[s]['ca_word_density'] = 0
-            relation_counts[s]['ma_word_density'] = 0
-            relation_counts[s]['arg_word_density'] = 0
-    return relation_counts
+            relation_counts['ra_locword_density'] = 0
+            relation_counts['ca_locword_density'] = 0
+            relation_counts['ma_locword_density'] = 0
+            relation_counts['arg_locword_density'] = 0
 
-
-def arg_loc_densities(xaif, verbose=False):
-    relation_counts = arg_relation_counts(xaif)
-    if 'AIF' in xaif.keys():
-        all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
-    else:
-        all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
-    if verbose:
-        print("Speakers listed in relation_counts:", list(relation_counts.keys()))
-    for s in relation_counts.keys():
-        spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
-
-        if spkr_locs != 0:
-            relation_counts[s]['ra_loc_density'] = relation_counts[s]['ra_count']/spkr_locs
-            relation_counts[s]['ca_loc_density'] = relation_counts[s]['ca_count']/spkr_locs
-            relation_counts[s]['ma_loc_density'] = relation_counts[s]['ma_count']/spkr_locs
-            relation_counts[s]['arg_loc_density'] = (relation_counts[s]['ra_count'] + relation_counts[s]['ca_count'])/spkr_locs
-        else:
-            relation_counts[s]['ra_loc_density'] = 0
-            relation_counts[s]['ca_loc_density'] = 0
-            relation_counts[s]['ma_loc_density'] = 0
-            relation_counts[s]['arg_loc_density'] = 0
     return relation_counts
 
 
@@ -191,7 +374,7 @@ def arg_loc_densities(xaif, verbose=False):
 # Order and structure # 
 #######################
 
-def concl_first_perc(xaif):
+def concl_first_perc(xaif, speaker=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -201,20 +384,60 @@ def concl_first_perc(xaif):
     # Per speaker
     concl_first = {}
     
-    for spkr in said:
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
-        ra_total = len(spkr_ra_all)
+    if speaker:
+        for spkr in said:
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+            ra_total = len(spkr_ra_all)
+            
+            concl_first[spkr] = {}
+            concl_first[spkr]['ra_count'] = ra_total
+            concl_first[spkr]['ra_concl_first'] = 0
+            concl_first[spkr]['ra_concl_first_perc'] = 0.0
+            
+            if ra_total == 0:
+                continue
+
+            for ra in spkr_ra_all:
+                found_order = False
+                for ra_incoming_node in all_nodes[ra]['ein']:
+
+                    # Found a YA with edge to the RA
+                    if all_nodes[ra_incoming_node]['type'] == 'YA':
+                        
+                        # all_nodes[ra_incoming_node] is currently a YA:
+                        # Get nodes with edge leading into the YA: s
+                        # Get the TA with edge to the YA: YA should only have TA incoming if it anchors RA
+                        for ya_incoming_node in all_nodes[ra_incoming_node]['ein']: 
+                            # YA incoming node should be TA
+                            # Get L-node descended from TA
+                            for ta_out in all_nodes[ya_incoming_node]['eout']:
+                                if all_nodes[ta_out]['type'] == 'L':
+                                    l = ta_out
+                                    i = i_from_l_node(l, all_nodes)
+                                    if ra in all_nodes[i]['eout']:
+                                        concl_first[spkr]['ra_concl_first'] += 1
+                                        found_order = True
+                                    elif ra in all_nodes[i]['ein']:
+                                        found_order = True
+                                    else:
+                                        print('I-node not connected to RA')
+                                        print(f"\t\t{i}: {all_nodes[i]['text']}")
+                                        # print(f"Disconnected I-node ")
+            
+            concl_first[spkr]['ra_concl_first_perc'] = concl_first[spkr]['ra_concl_first']/concl_first[spkr]['ra_count']
+    
+    # This should be refactored
+    else:
+        ra_total = len(ra_nodes)
         
-        concl_first[spkr] = {}
-        concl_first[spkr]['ra_count'] = ra_total
-        concl_first[spkr]['ra_concl_first'] = 0
-        concl_first[spkr]['ra_concl_first_perc'] = 0
+        concl_first['ra_count'] = ra_total
+        concl_first['ra_concl_first'] = 0
+        concl_first['ra_concl_first_perc'] = 0.0
         
         if ra_total == 0:
-            continue
-
-        for ra in spkr_ra_all:
-            found_order = False
+            return concl_first
+        
+        for ra in ra_nodes:
             for ra_incoming_node in all_nodes[ra]['ein']:
 
                 # Found a YA with edge to the RA
@@ -231,21 +454,17 @@ def concl_first_perc(xaif):
                                 l = ta_out
                                 i = i_from_l_node(l, all_nodes)
                                 if ra in all_nodes[i]['eout']:
-                                    concl_first[spkr]['ra_concl_first'] += 1
-                                    found_order = True
-                                elif ra in all_nodes[i]['ein']:
-                                    found_order = True
+                                    concl_first['ra_concl_first'] += 1
                                 else:
                                     print('I-node not connected to RA')
                                     print(f"\t\t{i}: {all_nodes[i]['text']}")
-                                    # print(f"Disconnected I-node ")
         
-        concl_first[spkr]['ra_concl_first_perc'] = concl_first[spkr]['ra_concl_first']/concl_first[spkr]['ra_count']
-    
+        concl_first['ra_concl_first_perc'] = concl_first['ra_concl_first']/concl_first['ra_count']
+
     return concl_first
 
 
-def ra_in_serial(xaif, debug=False):
+def ra_in_serial(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -255,52 +474,114 @@ def ra_in_serial(xaif, debug=False):
     # Per speaker
     ra_serial = {}
     
-    for spkr in said:
-        if debug:
-            print("Checking speaker ", spkr)
-        ra_serial[spkr] = {}
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+    if speaker:
+        for spkr in said:
+            if verbose:
+                print("Checking speaker ", spkr)
+            ra_serial[spkr] = {}
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
 
-        if debug:
-            print("\tSpeaker's RA nodes: ", spkr_ra_all)
+            if verbose:
+                print("\tSpeaker's RA nodes: ", spkr_ra_all)
 
-        ra_serial[spkr]['ra_serial_count'] = 0
+            ra_serial[spkr]['ra_serial_count'] = 0
 
-        if len(spkr_ra_all) == 0:
-            ra_serial[spkr]['ra_serial_perc'] = 0.0
-            continue
+            if len(spkr_ra_all) == 0:
+                ra_serial[spkr]['ra_serial_perc'] = 0.0
+                continue
 
-        for ra in spkr_ra_all:
-            if debug:
+            for ra in spkr_ra_all:
+                if verbose:
+                    print("\tChecking RA ", ra)
+                serial = False
+                # Get I-nodes with edge outgoing toward the RA
+                i_nodes_to_ra = [n for n in all_nodes if ra in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'I']
+
+                if verbose:
+                    print(f"\t\tI-nodes premise of (with edge toward) RA {ra}:")
+
+                # Check each of these for an incoming RA by the same speaker
+                for i in i_nodes_to_ra:                
+                    ra_nodes_to_i_node = [n for n in all_nodes if i in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'RA']
+                    if verbose:
+                        print(f"\t\t\t{i}: {all_nodes[i]['text']}")
+                        print(f"\t\t\tRA nodes where {i} is conclusion: ", ra_nodes_to_i_node)
+                    
+                    spkr_ra_match = [n for n in ra_nodes_to_i_node if spkr in all_nodes[n]['speaker']]
+                    if verbose:
+                        print(f"\t\t\tSubset with speaker match: ", spkr_ra_match)
+                        print(f"\t\t\tVerified:")
+                        for n in ra_nodes_to_i_node:
+                            print(f"\t\t\t\t", all_nodes[n])
+                    
+                    # Serial found for this RA!
+                    if len(spkr_ra_match) != 0:
+                        serial = True
+                        ra_serial[spkr]['ra_serial_count'] += 1
+                        if verbose:
+                            print(f'\t\t\t\tFound RA node(s) by same speaker with conclusion I-node {i}')
+                            print(f'\t\t\t\t\t', spkr_ra_match)
+                        break
+                
+                # If serial not found yet, check other direction
+                if not serial:
+                    # Get I-nodes with edge incoming from the RA
+                    i_nodes_from_ra = [n for n in all_nodes if ra in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'I']
+                    
+                    if verbose:
+                        print(f"\t\tI-nodes conclusion of (with edge from) RA {ra}:")
+                        for i in i_nodes_from_ra:
+                            print(f"\t\t\t{i}: {all_nodes[i]['text']}")
+                        print(f"\t\t\t{i}: {all_nodes[i]['text']}")
+                        print(f"\t\t\tRA nodes where {i} is conclusion: ", ra_nodes_to_i_node)
+
+                    # Check each of these for an incoming RA by the same 
+                    for i in i_nodes_from_ra:
+                        ra_nodes_from_i_node = [n for n in all_nodes if i in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'RA']
+                        spkr_ra_match = [n for n in ra_nodes_from_i_node if spkr in all_nodes[n]['speaker']]
+                        
+                        # I-node which is conclusion of RA has another RA from same speaker where it is premise
+                        if len(spkr_ra_match) != 0:
+                            ra_serial[spkr]['ra_serial_count'] += 1
+                            if verbose:
+                                print(f'\t\t\t\tFound RA node(s) by same speaker with premise I-node {i}')
+                                print(f'\t\t\t\t\t', spkr_ra_match)
+                        break
+
+            ra_serial[spkr]['ra_serial_perc'] = ra_serial[spkr]['ra_serial_count']/len(spkr_ra_all)
+    
+    else:
+        ra_serial['ra_serial_count'] = 0
+
+        if len(ra_nodes) == 0:
+            ra_serial['ra_serial_perc'] = 0.0
+            return ra_serial
+
+        for ra in ra_nodes:
+            if verbose:
                 print("\tChecking RA ", ra)
             serial = False
+            
             # Get I-nodes with edge outgoing toward the RA
             i_nodes_to_ra = [n for n in all_nodes if ra in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'I']
 
-            if debug:
+            if verbose:
                 print(f"\t\tI-nodes premise of (with edge toward) RA {ra}:")
 
-            # Check each of these for an incoming RA by the same speaker
+            # Check each of these for an incoming RA
             for i in i_nodes_to_ra:                
                 ra_nodes_to_i_node = [n for n in all_nodes if i in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'RA']
-                if debug:
+                if verbose:
                     print(f"\t\t\t{i}: {all_nodes[i]['text']}")
                     print(f"\t\t\tRA nodes where {i} is conclusion: ", ra_nodes_to_i_node)
                 
-                spkr_ra_match = [n for n in ra_nodes_to_i_node if spkr in all_nodes[n]['speaker']]
-                if debug:
-                    print(f"\t\t\tSubset with speaker match: ", spkr_ra_match)
-                    print(f"\t\t\tVerified:")
-                    for n in ra_nodes_to_i_node:
-                        print(f"\t\t\t\t", all_nodes[n])
-                
-                # Serial found for this RA!
-                if len(spkr_ra_match) != 0:
+                # If the I-node also has an incoming RA, orig RA is part of a serial arg!
+                if len(ra_nodes_to_i_node) != 0:
                     serial = True
-                    ra_serial[spkr]['ra_serial_count'] += 1
-                    if debug:
-                        print(f'\t\t\t\tFound RA node(s) by same speaker with conclusion I-node {i}')
-                        print(f'\t\t\t\t\t', spkr_ra_match)
+                    ra_serial['ra_serial_count'] += 1
+                    if verbose:
+                        print(f'\t\t\t\tFound RA node(s) with conclusion I-node {i}')
+                        print(f'\t\t\t\t\t', ra_nodes_to_i_node)
                     break
             
             # If serial not found yet, check other direction
@@ -308,7 +589,7 @@ def ra_in_serial(xaif, debug=False):
                 # Get I-nodes with edge incoming from the RA
                 i_nodes_from_ra = [n for n in all_nodes if ra in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'I']
                 
-                if debug:
+                if verbose:
                     print(f"\t\tI-nodes conclusion of (with edge from) RA {ra}:")
                     for i in i_nodes_from_ra:
                         print(f"\t\t\t{i}: {all_nodes[i]['text']}")
@@ -318,29 +599,28 @@ def ra_in_serial(xaif, debug=False):
                 # Check each of these for an incoming RA by the same 
                 for i in i_nodes_from_ra:
                     ra_nodes_from_i_node = [n for n in all_nodes if i in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'RA']
-                    spkr_ra_match = [n for n in ra_nodes_from_i_node if spkr in all_nodes[n]['speaker']]
                     
-                    # I-node which is conclusion of RA has another RA from same speaker where it is premise
-                    if len(spkr_ra_match) != 0:
-                        ra_serial[spkr]['ra_serial_count'] += 1
-                        if debug:
-                            print(f'\t\t\t\tFound RA node(s) by same speaker with premise I-node {i}')
-                            print(f'\t\t\t\t\t', spkr_ra_match)
+                    # I-node which is conclusion of RA has another RA for which it is premise
+                    if len(ra_nodes_from_i_node) != 0:
+                        ra_serial['ra_serial_count'] += 1
+                        if verbose:
+                            print(f'\t\t\t\tFound RA node(s) with premise I-node {i}')
+                            print(f'\t\t\t\t\t', ra_nodes_from_i_node)
                     break
 
-        ra_serial[spkr]['ra_serial_perc'] = ra_serial[spkr]['ra_serial_count']/len(spkr_ra_all)
-    
+        ra_serial['ra_serial_perc'] = ra_serial['ra_serial_count']/len(ra_nodes)
+
     return ra_serial
 
 
-def ra_in_convergent(xaif, debug=False):
+def ra_in_convergent(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
     ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
 
-    if debug:
+    if verbose:
         print("All RA nodes in map: ", ra_nodes)
         for n in ra_nodes:
             print(f"\t{n}: {all_nodes[n]}")
@@ -348,42 +628,62 @@ def ra_in_convergent(xaif, debug=False):
     # Per speaker
     ra_convergent = {}
 
-    for spkr in said:
-        ra_convergent[spkr] = {}
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+    if speaker:
+        for spkr in said:
+            ra_convergent[spkr] = {}
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
 
-        if debug:
-            print("Checking for ", spkr)
-            print(f"\tRAs by {spkr}: ", spkr_ra_all)
+            if verbose:
+                print("Checking for ", spkr)
+                print(f"\tRAs by {spkr}: ", spkr_ra_all)
 
-        ra_convergent[spkr]['ra_convergent_count'] = 0
+            ra_convergent[spkr]['ra_convergent_count'] = 0
 
-        if len(spkr_ra_all) == 0:
-            ra_convergent[spkr]['ra_convergent_perc'] = 0.0
-            continue
+            if len(spkr_ra_all) == 0:
+                ra_convergent[spkr]['ra_convergent_perc'] = 0.0
+                continue
 
-        for ra in spkr_ra_all:
-            # get conclusion I-node(s) of the relation
-            i_nodes_from_ra = [n for n in all_nodes if ra in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'I']
+            for ra in spkr_ra_all:
+                # get conclusion I-node(s) of the relation
+                i_nodes_from_ra = [n for n in all_nodes if ra in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'I']
 
-            for i in i_nodes_from_ra:
-                # Get all incoming RAs to the conclusion which are by current speaker
-                ra_nodes_to_i = [n for n in all_nodes if i in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'RA' and spkr in all_nodes[n]['speaker']]
-                # ^ remember to avoid the RA node being compared against!
+                for i in i_nodes_from_ra:
+                    # Get all incoming RAs to the conclusion which are by current speaker
+                    ra_nodes_to_i = [n for n in all_nodes if i in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'RA' and spkr in all_nodes[n]['speaker']]
 
-                # If there's more than one RA with this conclusion, then this RA is part of a convergent arg
-                # all the info we need about this RA, can move to next one
-                if len(ra_nodes_to_i) > 1:
-                    ra_convergent[spkr]['ra_convergent_count'] += 1
-                    break
-        if debug:
-            print(f"ra_convergent[spkr]['ra_convergent_perc'] = {ra_convergent[spkr]['ra_convergent_count']}/{len(spkr_ra_all)}")
-        ra_convergent[spkr]['ra_convergent_perc'] = ra_convergent[spkr]['ra_convergent_count']/len(spkr_ra_all)
+                    # If there's more than one RA with this conclusion, then this RA is part of a convergent arg
+                    # all the info we need about this RA, can move to next one
+                    if len(ra_nodes_to_i) > 1:
+                        ra_convergent[spkr]['ra_convergent_count'] += 1
+                        break
+            if verbose:
+                print(f"ra_convergent[spkr]['ra_convergent_perc'] = {ra_convergent[spkr]['ra_convergent_count']}/{len(spkr_ra_all)}")
+            ra_convergent[spkr]['ra_convergent_perc'] = ra_convergent[spkr]['ra_convergent_count']/len(spkr_ra_all)
     
+    else:
+        ra_convergent['ra_convergent_count'] = 0
+        ra_convergent['ra_convergent_perc'] = 0.0
+        if len(ra_nodes) == 0:
+            return ra_convergent
+
+        for ra in ra_nodes:
+            i_nodes_from_ra = [n for n in all_nodes if ra in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'I']
+            for i in i_nodes_from_ra:
+                # Get all incoming RAs to the conclusion
+                ra_nodes_to_i = [n for n in all_nodes if i in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'RA']
+                
+                # Multiple RAs with same conclusion as this RA, thus current RA is part of a convergent argument, add to count and move on
+                if len(ra_nodes_to_i) > 1:
+                    ra_convergent['ra_convergent_count'] += 1
+                    break
+        
+        ra_convergent['ra_convergent_perc'] = ra_convergent['ra_convergent_count']/len(ra_nodes)
+
+
     return ra_convergent
 
 
-def ra_in_divergent(xaif, debug=False):
+def ra_in_divergent(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -393,74 +693,121 @@ def ra_in_divergent(xaif, debug=False):
     # Per speaker
     ra_divergent = {}
 
-    for spkr in said:
-        ra_divergent[spkr] = {}
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+    if speaker:
+        for spkr in said:
+            ra_divergent[spkr] = {}
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
 
-        if debug:
-            print("Checking for ", spkr)
-            print(f"\tRAs by {spkr}: ", spkr_ra_all)
+            if verbose:
+                print("Checking for ", spkr)
+                print(f"\tRAs by {spkr}: ", spkr_ra_all)
 
-        ra_divergent[spkr]['ra_divergent_count'] = 0
+            ra_divergent[spkr]['ra_divergent_count'] = 0
 
-        if len(spkr_ra_all) == 0:
-            ra_divergent[spkr]['ra_divergent_perc'] = 0.0
-            continue
+            if len(spkr_ra_all) == 0:
+                ra_divergent[spkr]['ra_divergent_perc'] = 0.0
+                continue
 
-        for ra in spkr_ra_all:
+            for ra in spkr_ra_all:
+                # get premise I-node of the relation
+                i_node_to_ra = [n for n in all_nodes if ra in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'I']
+
+                if verbose:
+                    print(f"\t\tChecking RA {ra}")
+                    print(f"\t\t\tI-nodes to RA: ", i_node_to_ra)
+
+                for i in i_node_to_ra:
+                    # Get all outgoing RAs of the premise which are by current speaker
+                    ra_nodes_from_i = [n for n in all_nodes if i in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'RA' and spkr in all_nodes[n]['speaker']]
+                    if verbose:
+                        print(f"\t\t\t\tRA = {ra} \t I = {i}")
+                        print(f"Edges in to RA")
+                        print(f"\t\t\t\tRAs from {i}: ", ra_nodes_from_i)
+
+                    # If there's more than one RA with this premise, then this RA is part of a divergent arg
+                    # this is all the info we need about this RA, can move to next one
+                    if len(ra_nodes_from_i) > 1:
+                        ra_divergent[spkr]['ra_divergent_count'] += 1
+                        break
+            ra_divergent[spkr]['ra_divergent_perc'] = ra_divergent[spkr]['ra_divergent_count']/len(spkr_ra_all)
+    else:
+        ra_divergent['ra_divergent_count'] = 0
+
+        if len(ra_nodes) == 0:
+            ra_divergent['ra_divergent_perc'] = 0.0
+            return ra_divergent
+
+
+        for ra in ra_nodes:
             # get premise I-node of the relation
             i_node_to_ra = [n for n in all_nodes if ra in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'I']
 
-            if debug:
+            if verbose:
                 print(f"\t\tChecking RA {ra}")
                 print(f"\t\t\tI-nodes to RA: ", i_node_to_ra)
 
             for i in i_node_to_ra:
-                # Get all outgoing RAs of the premise which are by current speaker
-                ra_nodes_from_i = [n for n in all_nodes if i in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'RA' and spkr in all_nodes[n]['speaker']]
-                if debug:
+                # Get all outgoing RAs of the premise
+                ra_nodes_from_i = [n for n in all_nodes if i in all_nodes[n]['ein'] and all_nodes[n]['type'] == 'RA']
+                if verbose:
                     print(f"\t\t\t\tRA = {ra} \t I = {i}")
                     print(f"Edges in to RA")
                     print(f"\t\t\t\tRAs from {i}: ", ra_nodes_from_i)
 
-                # If there's more than one RA with this premise, then this RA is part of a divergent arg
+                # If there's more than one RA with this I-node as premise, then this RA is part of a divergent arg
                 # this is all the info we need about this RA, can move to next one
                 if len(ra_nodes_from_i) > 1:
-                    ra_divergent[spkr]['ra_divergent_count'] += 1
+                    ra_divergent['ra_divergent_count'] += 1
                     break
-        ra_divergent[spkr]['ra_divergent_perc'] = ra_divergent[spkr]['ra_divergent_count']/len(spkr_ra_all)
+        ra_divergent['ra_divergent_perc'] = ra_divergent['ra_divergent_count']/len(ra_nodes)
     
     return ra_divergent
 
 
-def ra_in_linked(xaif):
+def ra_in_linked(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
     ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
 
-    # Per speaker
+
     ra_linked = {}
 
-    for spkr in said:
-        ra_linked[spkr] = {}
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
+    if speaker:
+        for spkr in said:
+            ra_linked[spkr] = {}
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
 
-        ra_linked[spkr]['ra_linked_count'] = 0
+            ra_linked[spkr]['ra_linked_count'] = 0
 
-        if len(spkr_ra_all) == 0:
-            ra_linked[spkr]['ra_linked_perc'] = 0.0
-            continue
+            if len(spkr_ra_all) == 0:
+                ra_linked[spkr]['ra_linked_perc'] = 0.0
+                continue
 
-        for ra in spkr_ra_all:
+            for ra in spkr_ra_all:
+                i_to_ra = [n for n in all_nodes[ra]['ein'] if all_nodes[n]['type'] == 'I']
+                
+                if len(i_to_ra) > 1:
+                    ra_linked[spkr]['ra_linked_count'] += 1
+            
+                ra_linked[spkr]['ra_linked_perc'] = ra_linked[spkr]['ra_linked_count']/len(spkr_ra_all)
+
+
+    else:
+        ra_linked['ra_linked_count'] = 0
+
+        if len(ra_nodes) == 0:
+            ra_linked['ra_linked_perc'] = 0.0
+            return ra_linked
+
+        for ra in ra_nodes:
             i_to_ra = [n for n in all_nodes[ra]['ein'] if all_nodes[n]['type'] == 'I']
             
             if len(i_to_ra) > 1:
-                ra_linked[spkr]['ra_linked_count'] += 1
+                ra_linked['ra_linked_count'] += 1
         
-            ra_linked[spkr]['ra_linked_perc'] = ra_linked[spkr]['ra_linked_count']/len(spkr_ra_all)
-    
+            ra_linked['ra_linked_perc'] = ra_linked['ra_linked_count']/len(ra_nodes)
     return ra_linked
 
 
@@ -491,105 +838,268 @@ def circular_args(xaif):
     pass
 
 
+def ca_undercut(xaif, speaker=False, verbose=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+
+    ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+
+    undercut_count = {}
+    if speaker:
+        for spkr in said:
+            undercut_count[spkr] = {}
+            spkr_ca_nodes = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
+            undercutting = [n for n in spkr_ca_nodes if set(all_nodes[n]['eout']).intersection(ra_nodes)]
+            undercut_count[spkr]['undercut_count'] = len(undercutting)
+
+    else:    
+        # is an undercutter if its edges out include an edge to an RA
+        undercutting = [n for n in ca_nodes if set(all_nodes[n]['eout']).intersection(ra_nodes)]
+        undercut_count['undercut_count'] = len(undercutting)
+    
+    return undercut_count
+
+
+def ca_rebut(xaif, speaker=False, verbose=False, skip_altgive=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+
+    ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    if skip_altgive:
+        alt_give_yas = [n for n in all_nodes if all_nodes[n]['text'] == 'Alternative Giving' and all_nodes[n]['type'] == 'YA']
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(set(alt_give_yas))]
+
+    i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I']
+
+    rebut_count = {}
+    if speaker:
+        for spkr in said:
+            rebut_count[spkr] = {}
+            spkr_ca_nodes = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
+            rebutting = [n for n in spkr_ca_nodes if set(all_nodes[n]['eout']).intersection(i_nodes)]
+            rebut_count[spkr]['rebut_count'] = len(rebutting)
+
+    else:    
+        # is a rebutter if its edges out include an edge to an I
+        rebutting = [n for n in ca_nodes if set(all_nodes[n]['eout']).intersection(i_nodes)]
+        rebut_count['rebut_count'] = len(rebutting)
+    
+    return rebut_count
+
+
 #####################
 # Breadth and depth #
 #####################
 
-def initial_arg(ra_id, seen_ras, all_nodes, debug=False):
-    seen_ras = seen_ras + [ra_id]
+def initial_arg(xa_id, seen_xas, all_nodes, speaker=False, rel_type='RA', skip_altgive=False, verbose=False):
+    seen_xas = seen_xas + [xa_id]
     
+    if rel_type == 'CA' and skip_altgive:
+        ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+        alt_give_yas = [n for n in all_nodes if all_nodes[n]['text'] == 'Alternative Giving' and all_nodes[n]['type'] == 'YA']
+        cut_cas = [n for n in ca_nodes if set(all_nodes[n]['ein']).intersection(set(alt_give_yas))]
+
     initial_args = []
 
-    spkr = all_nodes[ra_id]['speaker'][0]
-    spkr_ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA' and spkr in all_nodes[n]['speaker'] and n not in seen_ras]
-
-    if debug:
-        print(f'Looking for earliest in chain from RA {ra_id}')
-        print(f'Have seen the following RAs so far: ', seen_ras)
-        print(f'Associated speaker is {spkr}')
-        print(f'Unseen RAs associated with this speaker: ', spkr_ra_nodes)
-        print(f'All nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker']])
-        print(f'RA nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker'] and all_nodes[n]['type'] == 'RA'])
+    if speaker:
+        spkr = all_nodes[xa_id]['speaker'][0]
+        spkr_xa_nodes = [n for n in all_nodes if all_nodes[n]['type'] == rel_type and spkr in all_nodes[n]['speaker'] and n not in seen_xas]
+        if rel_type == 'CA' and skip_altgive:
+            spkr_xa_nodes = [n for n in spkr_xa_nodes if n not in cut_cas]
+    else:
+        xa_nodes = [n for n in all_nodes if all_nodes[n]['type'] == rel_type and n not in seen_xas]
+        if rel_type == 'CA' and skip_altgive:
+            xa_nodes = [n for n in xa_nodes if n not in cut_cas]
+    
+    if verbose:
+        print(f'Looking for earliest in chain from {rel_type} {xa_id}')
+        print(f'Have seen the following {rel_type}s so far: ', seen_xas)
+        if speaker:
+            print(f'Associated speaker is {spkr}')
+            print(f'Unseen {rel_type}s associated with this speaker: ', spkr_xa_nodes)
+            print(f'All nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker']])
+            print(f'{rel_type} nodes saidby this speaker: ', [n for n in all_nodes if spkr in all_nodes[n]['speaker'] and all_nodes[n]['type'] == rel_type])
         
 
-    # I-nodes premise(s) to this RA
-    ra_premises = [n for n in all_nodes if ra_id in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'I']
+    # I-nodes premise(s) to this XA
+    xa_premises = [n for n in all_nodes if xa_id in all_nodes[n]['eout'] and all_nodes[n]['type'] == 'I']
 
-    if debug:
+    if verbose:
         print()
-        print(f"Premises for this RA: ", ra_premises)
+        print(f"Premises for this {rel_type}: ", xa_premises)
 
-    for i_premise in ra_premises:
-        ras_in = [n for n in spkr_ra_nodes if all_nodes[n]['nodeID'] in all_nodes[i_premise]['ein'] and all_nodes[n]['type'] == 'RA']
-        if debug:
-            print(f"Checking premise {i_premise}: {all_nodes[i_premise]['text']}")
-            print(f"\t{i_premise} has the following RAs in: ", ras_in)
-
-        if len(ras_in) == 0:
-            initial_args.append(ra_id)
+    for i_premise in xa_premises:
+        if speaker:
+            xas_in = [n for n in spkr_xa_nodes if all_nodes[n]['nodeID'] in all_nodes[i_premise]['ein'] and all_nodes[n]['type'] == rel_type]
         else:
-            for ra in ras_in:
-                initial_args = initial_args + initial_arg(ra, seen_ras, all_nodes)
-        if debug:
+            xas_in = [n for n in xa_nodes if all_nodes[n]['nodeID'] in all_nodes[i_premise]['ein'] and all_nodes[n]['type'] == rel_type]
+
+        if skip_altgive:
+            xas_in = [n for n in xas_in if n not in cut_cas]
+
+        if verbose:
+            print(f"Checking premise {i_premise}: {all_nodes[i_premise]['text']}")
+            print(f"\t{i_premise} has the following {rel_type}s in: ", xas_in)
+
+        if len(xas_in) == 0:
+            initial_args.append(xa_id)
+        else:
+            for xa in xas_in:
+                initial_args = initial_args + initial_arg(xa, seen_xas, all_nodes, speaker=speaker, rel_type=rel_type, skip_altgive=skip_altgive)
+        if verbose:
             print()
 
     # Avoid repeats
     return list(set(initial_args))
 
-def path_lens_from_arg(ra_id, all_nodes, verbose=False):
-    target_spkr = all_nodes[ra_id]['speaker'][0]
-    i_node_concls = [n for n in all_nodes if ra_id in all_nodes[n]['ein'] 
+
+
+def path_lens_from_arg(xa_id, seen_xas, all_nodes, rel_type='RA', speaker=False, verbose=False):
+    if verbose:
+        print(f"\nChecking path lengths from {xa_id}")
+    seen_xas = seen_xas + [xa_id]
+    if verbose:
+        print(f"Have now seen ", seen_xas)
+    
+    
+    if speaker:
+        target_spkr = all_nodes[xa_id]['speaker'][0]
+    i_node_concls = [n for n in all_nodes if xa_id in all_nodes[n]['ein'] 
                      and all_nodes[n]['type'] == 'I']
     
     path_list = []
 
+    if verbose:
+        print("Targeting I-node(s)", i_node_concls)
+
     for i_concl in i_node_concls:
-        ras_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
-                   and all_nodes[n]['type'] == 'RA' 
-                   and all_nodes[n]['speaker'][0] == target_spkr]
-        if len(ras_out) == 0:
+        if speaker:
+            xas_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
+                    and all_nodes[n]['type'] == rel_type 
+                    and all_nodes[n]['speaker'][0] == target_spkr]
+        else:
+            xas_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
+                    and all_nodes[n]['type'] == rel_type]
+        if verbose:
+            print(f"\tI-node {i_concl} has outgoing {rel_type}-nodes ", xas_out)
+            
+
+        if len(xas_out) == 0:   
             path_list.append(1)
         else:
-            for ra_out in ras_out:
-                path_list = path_list + [x + 1 for x in path_lens_from_arg(ra_out, all_nodes)]
+            for xa_out in xas_out:
+                # Avoid a loop: don't re-traverse anything traversed before
+                if xa_out in seen_xas:
+                    if verbose:
+                        print(f"Have already seen {rel_type} {xa_out}, not following that path")
+                    # But not just that it's been seen, this is therefore the end of a path! so should be recorded
+                    path_list.append(1)
+
+                    continue
+                if verbose: 
+                    print(f"\tFollowing path for {xa_out}")
+                path_list = path_list + [x + 1 for x in path_lens_from_arg(xa_out, seen_xas, all_nodes, speaker=speaker, rel_type=rel_type, verbose=verbose)]
                 # path_list = path_list + path_lens_from_arg(ra_out, all_nodes).apply(lambda x: x + 1)
     
     return path_list
 
 
-def arg_depths(xaif, verbose=False):
+def arg_depths(xaif, rel_type='RA', speaker=False, verbose=False, skip_altgive=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
-    ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+    xa_nodes = [n for n in all_nodes if all_nodes[n]['type'] == rel_type]
 
-    # Per speaker
-    ra_depths = {}
-    
-    for spkr in said:
-        if verbose:
-            print("Checking speaker ", spkr)
-        ra_depths[spkr] = {'arg_depths': []}
 
-        # Get starters (but this ignores any circular args)
-        spkr_starts = []
-        
-        # All RAs anchored by spkr's locs
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
 
-        # get all starts (this is ugly/inefficient but oh well)
-        for ra in spkr_ra_all:
-            spkr_starts += initial_arg(ra, [], all_nodes, debug=verbose)
-        spkr_starts = list(set(spkr_starts))
-        
+    xa_depths = {}
+    if rel_type == 'RA':
+        depth_type = 'arg'
+    elif rel_type == 'CA':
+        depth_type = 'ca'
+
+        # If using CAs and skipping alternative giving cases, remove any CAs from consideration which 
+        # have an incoming edge from anAlternative Giving node
+        if skip_altgive:
+            alt_give_yas = [n for n in all_nodes if all_nodes[n]['text'] == 'Alternative Giving' and all_nodes[n]['type'] == 'YA']
+            xa_nodes = [n for n in xa_nodes if not set(all_nodes[n]['ein']).intersection(set(alt_give_yas))]
+
+
+    if speaker:
+        # Per speaker
+        for spkr in said:
+            if verbose:
+                print("Checking speaker ", spkr)
+            xa_depths[spkr] = {f'{depth_type}_depths': []}
+
+            # Get starters (but this ignores any circular args)
+            spkr_starts = []
+            
+            # All RAs anchored by spkr's locs
+            spkr_xa_all = [n for n in xa_nodes if spkr in all_nodes[n]['speaker']]
+
+            # get all starts (this is ugly/inefficient but oh well)
+            for xa in spkr_xa_all:
+                spkr_starts += initial_arg(xa, [], all_nodes, speaker=speaker, verbose=verbose, rel_type=rel_type, skip_altgive=skip_altgive)
+            spkr_starts = list(set(spkr_starts))
+            
+            # Follow each argument path from the first RAs in each path
+            for starter_arg in spkr_starts:
+                if verbose:
+                    print("Looking for argument ", starter_arg)
+                xa_depths[spkr][f'{depth_type}_depths'] = xa_depths[spkr][f'{depth_type}_depths'] + path_lens_from_arg(starter_arg, [], all_nodes, speaker=speaker, verbose=verbose)
+
+    else:
+        xa_depths[f'{depth_type}_depths'] = []
+        # Get starters
+        starts = []
+        for xa in xa_nodes:
+            starts += initial_arg(xa, [], all_nodes, speaker=speaker, verbose=verbose, rel_type=rel_type)
+        starts = list(set(starts))
+
         # Follow each argument path from the first RAs in each path
-        for starter_arg in spkr_starts:
+        for starter_arg in starts:
             if verbose:
                 print("Looking for argument ", starter_arg)
-            ra_depths[spkr]['arg_depths'] = ra_depths[spkr]['arg_depths'] + path_lens_from_arg(starter_arg, all_nodes, verbose=verbose)
+            xa_depths[f'{depth_type}_depths'] = xa_depths[f'{depth_type}_depths'] + path_lens_from_arg(starter_arg, [], all_nodes, rel_type=rel_type, speaker=speaker, verbose=verbose)
 
-    return ra_depths
+    return xa_depths
+
+def max_ra_chain(xaif, speaker=False, verbose=False):
+    all_depths = arg_depths(xaif, speaker=speaker, verbose=verbose)
+    if speaker:
+        max_ra = {}
+        for spkr in all_depths:
+            max_ra[spkr] = {}
+            if len(all_depths[spkr]['arg_depths']) > 0:
+                max_ra[spkr]['max_ra_chain'] = max(all_depths[spkr]['arg_depths'])
+            else:
+                max_ra[spkr]['max_ra_chain'] = 0
+        return max_ra 
+    else:
+        if len(all_depths['arg_depths']) > 0:
+            return {'max_ra_chain': max(all_depths['arg_depths'])}
+        else:
+            return {'max_ra_chain': 0}
+
+
+
+def max_ca_chain(xaif, speaker=False, verbose=False):
+    all_depths = arg_depths(xaif, speaker=speaker, verbose=verbose, rel_type='CA')
+    if speaker:
+        max_ca = {}
+        for spkr in all_depths:
+            max_ca[spkr] = {}
+            if len(all_depths[spkr]['ca_depths']) > 0:
+                max_ca[spkr]['max_ca_chain'] = max(all_depths[spkr]['ca_depths'])
+            else:
+                max_ca[spkr]['max_ca_chain'] = 0
+        return max_ca 
+    else:
+        if len(all_depths['ca_depths']) > 0:
+            return {'max_ca_chain': max(all_depths['ca_depths'])}
+        else:
+            return {'max_ca_chain': 0}
 
 
 def arg_breadths(xaif, debug=False):
