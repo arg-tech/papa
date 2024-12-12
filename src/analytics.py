@@ -1102,7 +1102,7 @@ def max_ca_chain(xaif, speaker=False, verbose=False):
             return {'max_ca_chain': 0}
 
 
-def arg_breadths(xaif, debug=False):
+def arg_breadths(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1111,69 +1111,116 @@ def arg_breadths(xaif, debug=False):
 
     ra_breadths = {}
 
-    for spkr in said:
-        if debug:
-            print("Checking speaker", spkr)
-        ra_breadths[spkr] = {'arg_breadths': []}
+    if speaker:
+        for spkr in said:
+            if verbose:
+                print("Checking speaker", spkr)
+            ra_breadths[spkr] = {'arg_breadths': []}
 
-        # Get all I-nodes supported by speaker
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
-        
-        # I-nodes with an incoming edge from an RA associated with the speaker
-        spkr_suppd_i_nodes = [n for n in all_nodes 
-                              if all_nodes[n]['type'] == 'I'
-                              and set(spkr_ra_all) & set(all_nodes[n]['ein'])]
-        
-        if debug:
-            print(f"\tRA nodes:", spkr_ra_all)
-            print(f"\tSupports the following I-nodes: ")
-            for i in spkr_suppd_i_nodes:
-                print(f"\t\t{i}: {all_nodes[i]['text']}")
-
-
-        # Now have all speaker's RAs and all I-nodes they support
-        for supported in spkr_suppd_i_nodes:
-            supp_count = 0
+            # Get all I-nodes supported by speaker
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
             
+            # I-nodes with an incoming edge from an RA associated with the speaker
+            spkr_suppd_i_nodes = [n for n in all_nodes 
+                                if all_nodes[n]['type'] == 'I'
+                                and set(spkr_ra_all) & set(all_nodes[n]['ein'])]
+            
+            if verbose:
+                print(f"\tRA nodes:", spkr_ra_all)
+                print(f"\tSupports the following I-nodes: ")
+                for i in spkr_suppd_i_nodes:
+                    print(f"\t\t{i}: {all_nodes[i]['text']}")
+
+
+            # Now have all speaker's RAs and all I-nodes they support
+            for supported in spkr_suppd_i_nodes:
+                supp_count = 0
+                
+                # All incoming RAs from speaker
+                support_relations = [n for n in all_nodes[supported]['ein'] if n in spkr_ra_all]
+                if verbose:
+                    print(f"\tI-node {supported} supported by RA", *support_relations)
+                
+                # Count I-nodes to RA that are attributed to the speaker (for handling linked arguments)
+                for ra in support_relations:
+                    all_i_nodes_in = [n for n in all_nodes[ra]['ein'] if all_nodes[n]['type'] == 'I']
+
+                    # I-node was introduced by an L-node attributed to the speaker
+                    i_nodes_in = [n for n in all_i_nodes_in if set(all_nodes[n]['introby']) & set(said[spkr])]
+                    supp_count += len(i_nodes_in)
+
+                    if verbose:
+                        print(f"\t\t{spkr} I-nodes incoming to RA {ra}:", i_nodes_in)
+                        print(f"\t\tSupport count from this RA-node is {len(i_nodes_in)}, total support count for I-node so far is {supp_count}")
+                
+                ra_breadths[spkr]['arg_breadths'].append(supp_count)
+    else:
+        ra_breadths['arg_breadths'] = []
+        # Get all supported I-nodes
+        suppd_i_nodes = [n for n in all_nodes 
+                         if all_nodes[n]['type'] == 'I' 
+                         and set(ra_nodes) & set(all_nodes[n]['ein'])]
+        
+        if verbose:
+            print(f"\tRA nodes:", ra_nodes)
+            print(f"\tSupports the following I-nodes: ")
+            for i in suppd_i_nodes:
+                print(f"\t\t{i}: {all_nodes[i]['text']}")
+        
+        for supported in suppd_i_nodes:
+            supp_count = 0
+                
             # All incoming RAs from speaker
-            support_relations = [n for n in all_nodes[supported]['ein'] if n in spkr_ra_all]
-            if debug:
+            support_relations = [n for n in all_nodes[supported]['ein'] if n in ra_nodes]
+            if verbose:
                 print(f"\tI-node {supported} supported by RA", *support_relations)
             
             # Count I-nodes to RA that are attributed to the speaker (for handling linked arguments)
             for ra in support_relations:
                 all_i_nodes_in = [n for n in all_nodes[ra]['ein'] if all_nodes[n]['type'] == 'I']
 
-                # I-node was introduced by an L-node attributed to the speaker
-                i_nodes_in = [n for n in all_i_nodes_in if set(all_nodes[n]['introby']) & set(said[spkr])]
-                supp_count += len(i_nodes_in)
+                # Map-level: doesn't matter where support is from
+                supp_count += len(all_i_nodes_in)
 
-                if debug:
-                    print(f"\t\t{spkr} I-nodes incoming to RA {ra}:", i_nodes_in)
+                if verbose:
+                    print(f"\t\tI-nodes incoming to RA {ra}:", all_i_nodes_in)
                     print(f"\t\tSupport count from this RA-node is {len(i_nodes_in)}, total support count for I-node so far is {supp_count}")
             
-            ra_breadths[spkr]['arg_breadths'].append(supp_count)
+            ra_breadths['arg_breadths'].append(supp_count)
     
     return ra_breadths
 
 
-def avg_arg_depths(xaif, verbose=False):
-    depths = arg_depths(xaif)
-    for spkr in depths:
-        try:
-            depths[spkr]['avg_arg_depth'] = sum(depths[spkr]['arg_depths'])/len(depths[spkr]['arg_depths'])
-        except ZeroDivisionError:
-            depths[spkr]['avg_arg_depth'] = 0
+def avg_arg_depths(xaif, speaker=False, verbose=False):
+    depths = arg_depths(xaif, speaker=speaker)
+    if speaker:
+        for spkr in depths:
+            try:
+                depths[spkr]['avg_arg_depth'] = sum(depths[spkr]['arg_depths'])/len(depths[spkr]['arg_depths'])
+            except ZeroDivisionError:
+                depths[spkr]['avg_arg_depth'] = 0
+    else:
+        if len(depths['arg_depths']) == 0:
+                depths['avg_arg_depth'] = 0
+        else:
+            depths['avg_arg_depth'] = sum(depths['arg_depths'])/len(depths['arg_depths'])
+
     return depths
 
 
-def avg_arg_breadths(xaif):
-    breadths = arg_breadths(xaif)
-    for spkr in breadths:
-        try: 
-            breadths[spkr]['avg_arg_breadth'] = sum(breadths[spkr]['arg_breadths'])/len(breadths[spkr]['arg_breadths'])
-        except ZeroDivisionError:
-            breadths[spkr]['avg_arg_breadth'] = 0
+def avg_arg_breadths(xaif, speaker=False):
+    breadths = arg_breadths(xaif, speaker=speaker)
+    if speaker:
+        for spkr in breadths:
+            try: 
+                breadths[spkr]['avg_arg_breadth'] = sum(breadths[spkr]['arg_breadths'])/len(breadths[spkr]['arg_breadths'])
+            except ZeroDivisionError:
+                breadths[spkr]['avg_arg_breadth'] = 0
+    else:
+        if len(breadths['arg_breadths']) == 0:
+            breadths['avg_arg_breadth'] = 0
+        else:
+            breadths['avg_arg_breadth'] = sum(breadths['arg_breadths'])/len(breadths['arg_breadths'])
     return breadths
 
 ######################

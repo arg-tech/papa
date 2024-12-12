@@ -17,7 +17,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
             wordcounts = ova3.spkr_wordcounts(xaif)
             spkr_analytic_list = []
                 
-        spkr_rel_counts = analytics.arg_relation_counts(xaif)
+        spkr_rel_counts = analytics.arg_relation_counts(xaif, speaker=True)
 
         spkr_analytic_list.append(wordcounts)
         spkr_analytic_list.append(analytics.direct_args_from_others(xaif))
@@ -27,7 +27,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         spkr_analytic_list.append(analytics.arg_word_densities(xaif, speaker=speaker))
         spkr_analytic_list.append(analytics.arg_loc_densities(xaif, speaker=speaker))
         
-        spkr_analytic_list.append(analytics.arg_intros(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.arg_intros(xaif))
         spkr_analytic_list.append(analytics.concl_first_perc(xaif, speaker=speaker))
         spkr_analytic_list.append(analytics.avg_arg_breadths(xaif, speaker=speaker))
         spkr_analytic_list.append(analytics.avg_arg_depths(xaif, speaker=speaker))
