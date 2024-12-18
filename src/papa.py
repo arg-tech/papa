@@ -35,6 +35,12 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         spkr_analytic_list.append(analytics.ra_in_convergent(xaif, speaker=speaker))
         spkr_analytic_list.append(analytics.ra_in_divergent(xaif, speaker=speaker))
         spkr_analytic_list.append(analytics.ra_in_linked(xaif, speaker=speaker))
+
+        spkr_analytic_list.append(analytics.premise_count(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.concl_count(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.prem_concl_ratio(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.ra_ca_ratio(xaif, speaker=speaker))
+
     
         if spkr_analytic_list != []:
             for s in spkr_rel_counts.keys():
@@ -54,6 +60,11 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytic_list.append(analytics.ra_in_convergent(xaif, speaker=False))
     global_analytic_list.append(analytics.ra_in_divergent(xaif, speaker=False))
     global_analytic_list.append(analytics.ra_in_linked(xaif, speaker=False))
+
+    global_analytic_list.append(analytics.premise_count(xaif, speaker=False))
+    global_analytic_list.append(analytics.concl_count(xaif, speaker=False))
+    global_analytic_list.append(analytics.prem_concl_ratio(xaif, speaker=False))
+    global_analytic_list.append(analytics.ra_ca_ratio(xaif, speaker=False))
 
     #Adding analytics which calculate 'per node'
     if node_level:
