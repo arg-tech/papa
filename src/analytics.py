@@ -231,6 +231,27 @@ def arg_relation_counts(xaif, speaker=False, verbose=False, skip_altgive=False):
 
     return relation_counts
 
+def ra_ca_ratio(xaif, speaker=False, verbose=False, skip_altgive=False):
+    rel_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
+    
+    ra_to_ca = {}
+    
+    if not speaker:
+        if rel_counts['ca_count'] == 0:
+            ra_to_ca['ra_to_ca'] = 0
+        else:
+            ra_to_ca['ra_to_ca'] = rel_counts['ra_count']/rel_counts['ca_count']
+
+    else:
+        for spkr in rel_counts:
+            ra_to_ca[spkr] = {}
+            if rel_counts[spkr]['ca_count'] == 0:
+                ra_to_ca[spkr]['ra_to_ca'] = 0
+            else:
+                ra_to_ca[spkr]['ra_to_ca'] = rel_counts[spkr]['ra_count']/rel_counts[spkr]['ca_count']
+
+    return ra_to_ca
+
 # Density based on textfield wordcount
 def arg_word_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
     relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
@@ -368,6 +389,162 @@ def arg_locword_densities(xaif, speaker=False, verbose=False, skip_altgive=False
             relation_counts['arg_locword_density'] = 0
 
     return relation_counts
+
+
+def restating_count(xaif, speaker=False, verbose=False):
+    restating_counts = {}
+    
+    if not speaker:
+        restatement = [n for n in xaif['AIF']['nodes'] if n['type'] == 'YA' and n['text'] == 'Restating']
+        restating_counts['restating_count'] = len(restatement)
+    else:
+        all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+        all_restatement = [n for n in all_nodes if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == 'Restating']
+
+        for spkr in said:
+            spkr_restates = [n for n in all_restatement if spkr in all_nodes[n]['speaker']]
+            restating_counts[spkr] = {'restating_count': len(spkr_restates)}
+    
+    return restating_counts
+
+
+# I-node is a premise if it has an outgoing edge to an RA
+# When speaker-wise: only count if premise to a conclusion by same speaker, or to a previously given other-speaker conclusion
+# (i.e. don't attribute premise-making to a speaker unless it's part of their own argument construction)
+def premise_count(xaif, speaker=False, verbose=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+
+    ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+
+    premise_count = {}
+
+    if speaker:
+        for spkr in said:
+            premise_count[spkr] = {'premise_count': 0}
+
+            # speaker i-nodes
+            i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I' and spkr in all_nodes[n]['saidby']]
+            
+            # for each, check if it's a premise
+            # if a premise, check if for something that is same-speaker or chron earlier -> if yes to either, is a premise
+            for i in i_nodes:
+                is_premise=False
+                # Get relations in which this I is a premise
+                premise_for = [ra for ra in all_nodes[i]['eout'] if all_nodes[ra]['type'] == 'RA']
+                if len(premise_for) == 0:
+                    continue
+
+                # Check if any RA from the I-node concludes in an I-node that meets the criteria above
+                for ra in premise_for:
+                    concl_nodes = [j for j in all_nodes[ra]['eout'] if all_nodes[j]['type'] == 'I']
+                    
+                    for n in concl_nodes:
+                        # Same speaker, speaker's own argument, is premise whether initial or not
+                        if spkr == i_node_introducer(n, all_nodes):
+                            is_premise = True
+                            break
+                        # Different speaker: check if concl is pre-existing material -- if concl added later, don't consider this a spkr premise
+                        else:
+                            intro_prem = all_nodes[i]['introby'][0]
+                            intro_concl = all_nodes[n]['introby'][0]
+                            if all_nodes[intro_concl]['chron'] < all_nodes[intro_prem]['chron']:
+                                is_premise = True
+
+                    if is_premise:
+                        break
+                
+                if is_premise:
+                    premise_count[spkr]['premise_count'] += 1
+
+    
+    else:
+        i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I']
+        
+        # I-node is a premise if there is an intersection between its outgoing edge targets and the list of RAs
+        premise_i_nodes = [n for n in i_nodes if set(all_nodes[n]['eout']) & set(ra_nodes)]
+        premise_count['premise_count'] = len(premise_i_nodes)
+
+    return premise_count
+    
+
+def concl_count(xaif, speaker=False, verbose=False):
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+    ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+
+    conclusion_count = {}
+
+    if speaker:
+        for spkr in said:
+            conclusion_count[spkr] = {'concl_count': 0}
+
+            # speaker i-nodes
+            i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I' and spkr in all_nodes[n]['saidby']]
+            
+            # for each, check if it's a conclusion
+            # if a conclusion, check if for something that is same-speaker or has earlier chron -> if yes to either, is a conclusion
+            for i in i_nodes:
+                is_concl=False
+                # Get relations in which this I is a conclusion
+                concl_for = [ra for ra in all_nodes[i]['ein'] if all_nodes[ra]['type'] == 'RA']
+                if len(concl_for) == 0:
+                    continue
+
+                # Check if any RA from the I-node derives from an I-node that meets the criteria above
+                for ra in concl_for:
+                    premise_nodes = [j for j in all_nodes[ra]['ein'] if all_nodes[j]['type'] == 'I']
+                    
+                    for n in premise_nodes:
+                        # Same speaker, speaker's own argument, is premise whether initial or not
+                        if spkr == i_node_introducer(n, all_nodes):
+                            is_concl = True
+                            break
+                        # Different speaker: check if premise is pre-existing material -- if premise added later, don't consider this a spkr concl
+                        else:
+                            intro_concl = all_nodes[i]['introby'][0]
+                            intro_prem = all_nodes[n]['introby'][0]
+                            if all_nodes[intro_prem]['chron'] < all_nodes[intro_concl]['chron']:
+                                is_concl = True
+
+                    if is_concl:
+                        break
+                
+                if is_concl:
+                    conclusion_count[spkr]['concl_count'] += 1
+
+    
+    else:
+        i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I']
+        
+        # I-node is a conclusion if there is an intersection between its incoming edge origins and the list of RAs
+        conclusion_i_nodes = [n for n in i_nodes if set(all_nodes[n]['ein']) & set(ra_nodes)]
+        conclusion_count['concl_count'] = len(conclusion_i_nodes)
+
+    return conclusion_count
+
+
+def prem_concl_ratio(xaif, speaker=False, verbose=False):
+    prems = premise_count(xaif, speaker=speaker)
+    concs = concl_count(xaif, speaker=speaker)
+
+    prem_to_conc = {}
+
+    if not speaker:
+        if concs['concl_count'] == 0:
+            prem_to_conc['premise_to_concl'] = 0
+        else:
+            prem_to_conc['premise_to_concl'] = prems['premise_count']/concs['concl_count']
+    
+    else:
+        for spkr in prems:
+            prem_to_conc[spkr] = {}
+            if concs[spkr]['concl_count'] == 0:
+                prem_to_conc[spkr]['premise_to_concl'] = 0
+            else:
+                prem_to_conc[spkr]['premise_to_concl'] = prems[spkr]['premise_count']/concs[spkr]['concl_count']
+
+    return prem_to_conc
+
+
 
 
 #######################
@@ -886,6 +1063,8 @@ def ca_rebut(xaif, speaker=False, verbose=False, skip_altgive=False):
     return rebut_count
 
 
+
+
 #####################
 # Breadth and depth #
 #####################
@@ -1102,7 +1281,7 @@ def max_ca_chain(xaif, speaker=False, verbose=False):
             return {'max_ca_chain': 0}
 
 
-def arg_breadths(xaif, debug=False):
+def arg_breadths(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1111,69 +1290,116 @@ def arg_breadths(xaif, debug=False):
 
     ra_breadths = {}
 
-    for spkr in said:
-        if debug:
-            print("Checking speaker", spkr)
-        ra_breadths[spkr] = {'arg_breadths': []}
+    if speaker:
+        for spkr in said:
+            if verbose:
+                print("Checking speaker", spkr)
+            ra_breadths[spkr] = {'arg_breadths': []}
 
-        # Get all I-nodes supported by speaker
-        spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
-        
-        # I-nodes with an incoming edge from an RA associated with the speaker
-        spkr_suppd_i_nodes = [n for n in all_nodes 
-                              if all_nodes[n]['type'] == 'I'
-                              and set(spkr_ra_all) & set(all_nodes[n]['ein'])]
-        
-        if debug:
-            print(f"\tRA nodes:", spkr_ra_all)
-            print(f"\tSupports the following I-nodes: ")
-            for i in spkr_suppd_i_nodes:
-                print(f"\t\t{i}: {all_nodes[i]['text']}")
-
-
-        # Now have all speaker's RAs and all I-nodes they support
-        for supported in spkr_suppd_i_nodes:
-            supp_count = 0
+            # Get all I-nodes supported by speaker
+            spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
             
+            # I-nodes with an incoming edge from an RA associated with the speaker
+            spkr_suppd_i_nodes = [n for n in all_nodes 
+                                if all_nodes[n]['type'] == 'I'
+                                and set(spkr_ra_all) & set(all_nodes[n]['ein'])]
+            
+            if verbose:
+                print(f"\tRA nodes:", spkr_ra_all)
+                print(f"\tSupports the following I-nodes: ")
+                for i in spkr_suppd_i_nodes:
+                    print(f"\t\t{i}: {all_nodes[i]['text']}")
+
+
+            # Now have all speaker's RAs and all I-nodes they support
+            for supported in spkr_suppd_i_nodes:
+                supp_count = 0
+                
+                # All incoming RAs from speaker
+                support_relations = [n for n in all_nodes[supported]['ein'] if n in spkr_ra_all]
+                if verbose:
+                    print(f"\tI-node {supported} supported by RA", *support_relations)
+                
+                # Count I-nodes to RA that are attributed to the speaker (for handling linked arguments)
+                for ra in support_relations:
+                    all_i_nodes_in = [n for n in all_nodes[ra]['ein'] if all_nodes[n]['type'] == 'I']
+
+                    # I-node was introduced by an L-node attributed to the speaker
+                    i_nodes_in = [n for n in all_i_nodes_in if set(all_nodes[n]['introby']) & set(said[spkr])]
+                    supp_count += len(i_nodes_in)
+
+                    if verbose:
+                        print(f"\t\t{spkr} I-nodes incoming to RA {ra}:", i_nodes_in)
+                        print(f"\t\tSupport count from this RA-node is {len(i_nodes_in)}, total support count for I-node so far is {supp_count}")
+                
+                ra_breadths[spkr]['arg_breadths'].append(supp_count)
+    else:
+        ra_breadths['arg_breadths'] = []
+        # Get all supported I-nodes
+        suppd_i_nodes = [n for n in all_nodes 
+                         if all_nodes[n]['type'] == 'I' 
+                         and set(ra_nodes) & set(all_nodes[n]['ein'])]
+        
+        if verbose:
+            print(f"\tRA nodes:", ra_nodes)
+            print(f"\tSupports the following I-nodes: ")
+            for i in suppd_i_nodes:
+                print(f"\t\t{i}: {all_nodes[i]['text']}")
+        
+        for supported in suppd_i_nodes:
+            supp_count = 0
+                
             # All incoming RAs from speaker
-            support_relations = [n for n in all_nodes[supported]['ein'] if n in spkr_ra_all]
-            if debug:
+            support_relations = [n for n in all_nodes[supported]['ein'] if n in ra_nodes]
+            if verbose:
                 print(f"\tI-node {supported} supported by RA", *support_relations)
             
             # Count I-nodes to RA that are attributed to the speaker (for handling linked arguments)
             for ra in support_relations:
                 all_i_nodes_in = [n for n in all_nodes[ra]['ein'] if all_nodes[n]['type'] == 'I']
 
-                # I-node was introduced by an L-node attributed to the speaker
-                i_nodes_in = [n for n in all_i_nodes_in if set(all_nodes[n]['introby']) & set(said[spkr])]
-                supp_count += len(i_nodes_in)
+                # Map-level: doesn't matter where support is from
+                supp_count += len(all_i_nodes_in)
 
-                if debug:
-                    print(f"\t\t{spkr} I-nodes incoming to RA {ra}:", i_nodes_in)
+                if verbose:
+                    print(f"\t\tI-nodes incoming to RA {ra}:", all_i_nodes_in)
                     print(f"\t\tSupport count from this RA-node is {len(i_nodes_in)}, total support count for I-node so far is {supp_count}")
             
-            ra_breadths[spkr]['arg_breadths'].append(supp_count)
+            ra_breadths['arg_breadths'].append(supp_count)
     
     return ra_breadths
 
 
-def avg_arg_depths(xaif, verbose=False):
-    depths = arg_depths(xaif)
-    for spkr in depths:
-        try:
-            depths[spkr]['avg_arg_depth'] = sum(depths[spkr]['arg_depths'])/len(depths[spkr]['arg_depths'])
-        except ZeroDivisionError:
-            depths[spkr]['avg_arg_depth'] = 0
+def avg_arg_depths(xaif, speaker=False, verbose=False):
+    depths = arg_depths(xaif, speaker=speaker)
+    if speaker:
+        for spkr in depths:
+            try:
+                depths[spkr]['avg_arg_depth'] = sum(depths[spkr]['arg_depths'])/len(depths[spkr]['arg_depths'])
+            except ZeroDivisionError:
+                depths[spkr]['avg_arg_depth'] = 0
+    else:
+        if len(depths['arg_depths']) == 0:
+                depths['avg_arg_depth'] = 0
+        else:
+            depths['avg_arg_depth'] = sum(depths['arg_depths'])/len(depths['arg_depths'])
+
     return depths
 
 
-def avg_arg_breadths(xaif):
-    breadths = arg_breadths(xaif)
-    for spkr in breadths:
-        try: 
-            breadths[spkr]['avg_arg_breadth'] = sum(breadths[spkr]['arg_breadths'])/len(breadths[spkr]['arg_breadths'])
-        except ZeroDivisionError:
-            breadths[spkr]['avg_arg_breadth'] = 0
+def avg_arg_breadths(xaif, speaker=False):
+    breadths = arg_breadths(xaif, speaker=speaker)
+    if speaker:
+        for spkr in breadths:
+            try: 
+                breadths[spkr]['avg_arg_breadth'] = sum(breadths[spkr]['arg_breadths'])/len(breadths[spkr]['arg_breadths'])
+            except ZeroDivisionError:
+                breadths[spkr]['avg_arg_breadth'] = 0
+    else:
+        if len(breadths['arg_breadths']) == 0:
+            breadths['avg_arg_breadth'] = 0
+        else:
+            breadths['avg_arg_breadth'] = sum(breadths['arg_breadths'])/len(breadths['arg_breadths'])
     return breadths
 
 ######################
