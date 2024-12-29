@@ -481,20 +481,22 @@ def locution_markup_sort(old_xaif_text):
     return marked_loc_spans
 
 def add_loc_order(xaif, all_nodes, verbose=False):
-    loc_order = locution_markup_sort(xaif['text'])
-    counter = 1
+    try:
+        loc_order = locution_markup_sort(xaif['text'])
+        counter = 1
 
-    if verbose:
-        print(loc_order)
-        print(all_nodes.keys())
+        if verbose:
+            print(loc_order)
+            print(all_nodes.keys())
 
-    for num in loc_order:
-        try: 
-            all_nodes[num]['chron'] = counter
-            counter += 1
-        except KeyError:
-            print(f"Node {num} found in text but no node {num} found in node list")
-    
+        for num in loc_order:
+            try: 
+                all_nodes[num]['chron'] = counter
+                counter += 1
+            except KeyError:
+                print(f"Node {num} found in text but no node {num} found in node list")
+    except:
+        print("No text field found so cannot place locutions in correct order")
     return all_nodes
 
 
