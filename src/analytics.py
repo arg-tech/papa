@@ -2564,13 +2564,24 @@ def getHypSubgraphs(xaif):
                         for edge in edge_to_add:
                             subgraph_edges.append(edge)
                     
-
-
-        xaif_subgraph = {
+        text = ''
+        subgraph_lnodes = [n for n in subgraph_nodes if n['type'] == "L"]
+        for lnode in subgraph_lnodes:
+            text_array = lnode['text'].split(":")
+            index = 0
+            for item in text_array:
+                if index > 0:
+                    # split_text = item.split()
+                    # wordcount += len(split_text)
+                    text = text + item
+                index +=1
+            
+            xaif_subgraph = {
             "AIF": {
                 'nodes': subgraph_nodes,
                 'edges': subgraph_edges
-            }
+            },
+            "text": text
         }
         # print(xaif_subgraph)
 
