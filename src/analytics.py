@@ -2465,7 +2465,9 @@ def getHypSubgraphs(xaif):
                 edges_to_append = [e for e in xaif['AIF']['edges'] if e['fromID'] in incoming_edges and e['fromID'] in incoming_non_YA]
                 
                 if edges_to_append != []:
-                    subgraph_edges.append(edges_to_append)
+                    for item in edges_to_append:
+                        subgraph_edges.append(item)
+                    # subgraph_edges.append(edges_to_append)
                 edges_to_append = []
 
                 # print("edges to append 1:")
