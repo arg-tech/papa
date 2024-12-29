@@ -2540,6 +2540,32 @@ def getHypSubgraphs(xaif):
         # print("subgraph_nodes")
         # print(subgraph_nodes)
 
+        #For each i-node, find corresponding YA and L node
+        ya_list = ['Asserting', 'Hypothesising', 'Pure Questioning', 'Default Illocuting']
+        subgraph_inodes = [n for n in subgraph_nodes if n['type'] == "I"]
+        for inode in subgraph_inodes:
+            inode_to_ya = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] == inode['nodeID']]
+            ya_inode_anchor = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in inode_to_ya]
+            for node in ya_inode_anchor:
+                if node['type'] == "YA" and node['text'] in ya_list:
+                    subgraph_nodes.append(node)
+                    
+
+                ya_to_l = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] == node['nodeID']]
+                l_nodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in ya_to_l]
+
+                for lnode in l_nodes:
+                    if lnode['type'] == "L":
+                        subgraph_nodes.append(lnode)
+                        edge_to_add = [e for e in xaif['AIF']['edges'] if e['toID']== inode['nodeID'] and e['fromID'] == node['nodeID']]
+                        for edge in edge_to_add:
+                            subgraph_edges.append(edge)
+                        edge_to_add = [e for e in xaif['AIF']['edges'] if e['toID'] == node['nodeID'] and e['fromID'] == lnode['nodeID']]
+                        for edge in edge_to_add:
+                            subgraph_edges.append(edge)
+                    
+
+
         xaif_subgraph = {
             "AIF": {
                 'nodes': subgraph_nodes,
