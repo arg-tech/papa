@@ -193,39 +193,20 @@ def remove_all_meta(xaif: dict, verbose=False) -> dict:
     if verbose:
         print("*** Removing extra nodes and edges ***")
 
-    # Has OVA section: remove whatever's invisble
-    if 'OVA' in xaif:
-        if verbose:
-            print('Removing nodes marked as invisible in OVA')
-        # Get the IDs for the meta nodes (nodes set to non-visible in OVA)
-        metanode_ids = invisible_nodes(xaif)
-        if verbose:
-            print(f"Found {len(metanode_ids)} invisible nodes: ", metanode_ids)
-
-    # File has no OVA section: find meta nodes manually
-    else:
-        if verbose:
-            print("No OVA section: removing based on 'Analysing' nodes")
-        
-        analysing_node_ids = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['text'] == 'Analysing' and n['type'] == 'YA']
-        ids_to_analysing = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in analysing_node_ids]
-        metanode_ids = analysing_node_ids + ids_to_analysing
-        if verbose:
-            print(metanode_ids)
-
-    nonmeta_nodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] not in metanode_ids]
-
-    # Remove the edges involving meta nodes from the list of AIF nodes.
-    # Make an alternative 'edges' list for 'AIF' with the edges connected to a meta node stripped out
-    # (Remove any edge from a meta node: visible nodes don't have edges to invisible nodes, unidirectional
-    nonmeta_edges = [e for e in xaif['AIF']['edges'] if e['fromID'] not in metanode_ids]
+    # Get the IDs for the meta nodes (nodes set to non-visible in OVA)
+    metanode_ids = invisible_nodes(xaif)
 
     if verbose:
+        print(f"Found {len(metanode_ids)} invisible nodes")
         print()
-        print(f'Nodes to cut ({len(metanode_ids)}):', metanode_ids)
-        print(f'Nodes to keep ({len(nonmeta_nodes)}):', [n['nodeID'] for n in nonmeta_nodes])
-        print(f'Edges to cut (?)')
-        print(f'Edges to keep ({len(nonmeta_edges)}):', nonmeta_edges)
+
+    # Remove the edges involving invisible meta nodes from the list of AIF nodes.
+    nonmeta_nodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] not in metanode_ids]
+
+    # Make an alternative 'edges' list for 'AIF' with the edges connected to a meta node stripped out
+    # (Remove any edge from a meta node: visible nodes don't have edges to invisible nodes, unidirectional
+    # Could also do the same process, getting a list of the invisible edges: but already have a way to find them...
+    nonmeta_edges = [e for e in xaif['AIF']['edges'] if e['fromID'] not in metanode_ids]
 
     if verbose:
         print("\nOld counts:")
@@ -241,6 +222,35 @@ def remove_all_meta(xaif: dict, verbose=False) -> dict:
         print("\tNodes: ", len(xaif['AIF']['nodes']))
         print("\tEdges: ", len(xaif['AIF']['edges']))
 
+    # if verbose:
+        # print("\n*** Removing non-speaking 'participants' ***")
+
+    # REMOVE INSTANCES OF REPORTED SPEECH FROM LOCUTION LIST AT THIS POINT!
+    # something like: iterate through members of locutions, if they have 'start' key, add to keeper list,
+    # then replace the original locutions list with the keeper list similar to nodes and edges above.
+    # Can keep them in the node list, but for my purposes don't want them among the 'real' locutions
+
+    # working_xaif = trim_participants(working_xaif, verbose=verbose)
+
+    # Do it by spotting analysing nodes
+    # Find the tell-tale nodes, analysing YAs:
+    if verbose:
+        print("Now trying directly with nodes!")
+    analysis_yas = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['text'] == 'Analysing' and n['type'] == 'YA']
+    if verbose:
+        print(f"{len(analysis_yas)} Analysing nodes found")
+
+
+    # Note the edges into the analysing node, to find the analyst L-nodes
+    analysis_lsource = [e['toID'] for e in xaif['AIF']['edges'] if e['fromID'] in analysis_yas]
+
+    # Remove edges to and from from the Analysing nodes
+    xaif['AIF']['edges'] = list(filter(lambda x: x['fromID'] not in analysis_yas, xaif['AIF']['edges']))
+    xaif['AIF']['edges'] = list(filter(lambda x: x['toID'] not in analysis_yas, xaif['AIF']['edges']))
+
+    # Remove the analysing YA nodes and analyst L nodes
+    xaif['AIF']['nodes'] = list(filter(lambda x: x['nodeID'] not in analysis_yas, xaif['AIF']['nodes']))
+    xaif['AIF']['nodes'] = list(filter(lambda x: x['nodeID'] not in analysis_lsource, xaif['AIF']['nodes']))
 
     return xaif
 
