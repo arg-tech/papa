@@ -2323,7 +2323,8 @@ def addForecastAccuracy(xaif):
         with open ('forecast750_brier.csv', 'r') as file:
             csvfile = csv.reader(file)
             for line in csvfile:
-                if line[0] == id:
+                if line[1] == id:
+                    print("In IF")
                     if line[16] != "unknown":
                         return {"accuracy": line[16]}
                     else:
@@ -2341,7 +2342,7 @@ def addNodeOutcomes(xaif):
         node_outcomes = []
         csvfile = csv.reader(file)
         for line in csvfile:
-            if line[0] == id:
+            if line[1] == id:
                 probability_list = []
                 items = line[9][1:-1].split(',')
                 probability_list.extend(items)
@@ -2351,9 +2352,11 @@ def addNodeOutcomes(xaif):
                 inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
                 for inode in inodes:
                     match = re.search(r"\, \d?\.\d+ \w+", inode['text'])
-                    print(match)
+                    # print(match)
                     if match != None:
                         match_span = match.span()
+                        print("match span")
+                        print(match_span)
                         match_split = match.string[match_span[0]:match_span[1]].split()
                         probability = match_split[1]
                         if probability in probability_list:
@@ -2384,11 +2387,13 @@ def addNodeOutcomes(xaif):
     
 
 def getHypSubgraphs(xaif):
+    print("in get hyp subgraphs")
+    print(xaif)
 
     subgraphs = []
 
     inode_ids = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "I"]
-
+    print(inode_ids)
     nodetoinode = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in inode_ids]
 
     #Get YA "Hypothesising" nodes
@@ -2442,9 +2447,9 @@ def getHypSubgraphs(xaif):
             subgraph_nodes.append(current_node)
 
             while moreNodes:
-                print("------------------------")
-                print("Current Node: ")
-                print(current_node)
+                # print("------------------------")
+                # print("Current Node: ")
+                # print(current_node)
                 
 
 
@@ -2460,11 +2465,13 @@ def getHypSubgraphs(xaif):
                 edges_to_append = [e for e in xaif['AIF']['edges'] if e['fromID'] in incoming_edges and e['fromID'] in incoming_non_YA]
                 
                 if edges_to_append != []:
-                    subgraph_edges.append(edges_to_append)
+                    for item in edges_to_append:
+                        subgraph_edges.append(item)
+                    # subgraph_edges.append(edges_to_append)
                 edges_to_append = []
 
-                print("edges to append 1:")
-                print([e for e in xaif['AIF']['edges'] if e['fromID'] in incoming_edges and e['fromID'] in incoming_non_YA])
+                # print("edges to append 1:")
+                # print([e for e in xaif['AIF']['edges'] if e['fromID'] in incoming_edges and e['fromID'] in incoming_non_YA])
                 
                 # print("Incoming non YA: ")
                 # print(incoming_non_YA)
@@ -2483,8 +2490,8 @@ def getHypSubgraphs(xaif):
 
 
 
-                print("edges to append 2:")
-                print([e for e in xaif['AIF']['edges'] if e['fromID'] in next_level_inode_ids and e['toID'] in incoming_non_YA])
+                # print("edges to append 2:")
+                # print([e for e in xaif['AIF']['edges'] if e['fromID'] in next_level_inode_ids and e['toID'] in incoming_non_YA])
                 edges_to_append = [e for e in xaif['AIF']['edges'] if e['fromID'] in next_level_inode_ids and e['toID'] in incoming_non_YA]
                 # edges_to_append_ids = [e['fromID'] for e in xaif['AIF']['edges'] if e['fromID'] in next_level_inode_ids and e['toID'] in incoming_non_YA]
 
@@ -2530,16 +2537,53 @@ def getHypSubgraphs(xaif):
         # subgraph.append(subgraph_edges)
         # print("Subgraph: ")
         # print(subgraph)
-        print("subgraph_nodes")
-        print(subgraph_nodes)
+        # print("subgraph_nodes")
+        # print(subgraph_nodes)
 
-        xaif_subgraph = {
+        #For each i-node, find corresponding YA and L node
+        ya_list = ['Asserting', 'Hypothesising', 'Pure Questioning', 'Default Illocuting']
+        subgraph_inodes = [n for n in subgraph_nodes if n['type'] == "I"]
+        for inode in subgraph_inodes:
+            inode_to_ya = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] == inode['nodeID']]
+            ya_inode_anchor = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in inode_to_ya]
+            for node in ya_inode_anchor:
+                if node['type'] == "YA" and node['text'] in ya_list:
+                    subgraph_nodes.append(node)
+                    
+
+                ya_to_l = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] == node['nodeID']]
+                l_nodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in ya_to_l]
+
+                for lnode in l_nodes:
+                    if lnode['type'] == "L":
+                        subgraph_nodes.append(lnode)
+                        edge_to_add = [e for e in xaif['AIF']['edges'] if e['toID']== inode['nodeID'] and e['fromID'] == node['nodeID']]
+                        for edge in edge_to_add:
+                            subgraph_edges.append(edge)
+                        edge_to_add = [e for e in xaif['AIF']['edges'] if e['toID'] == node['nodeID'] and e['fromID'] == lnode['nodeID']]
+                        for edge in edge_to_add:
+                            subgraph_edges.append(edge)
+                    
+        text = ''
+        subgraph_lnodes = [n for n in subgraph_nodes if n['type'] == "L"]
+        for lnode in subgraph_lnodes:
+            text_array = lnode['text'].split(":")
+            index = 0
+            for item in text_array:
+                if index > 0:
+                    # split_text = item.split()
+                    # wordcount += len(split_text)
+                    text = text + item
+                index +=1
+            
+            xaif_subgraph = {
             "AIF": {
                 'nodes': subgraph_nodes,
                 'edges': subgraph_edges
-            }
+            },
+            "text": text
         }
-        print(xaif_subgraph)
+        # print(xaif_subgraph)
 
         subgraphs.append(xaif_subgraph)
     
@@ -2550,6 +2594,18 @@ def raCount(xaif):
     ra_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'RA']
     return {"ra_count" : len(ra_nodes)}
 
+def caCount(xaif):
+    ca_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'CA']
+    return {"ca_count" : len(ca_nodes)}
+
+def forecast_wc(xaif):
+    wc_per_node = node_wc(xaif)
+    print(wc_per_node)
+    sum = 0
+    for node in wc_per_node['word_count']:
+        num = node.get("word count:")
+        sum += num
+    return({"word count" : sum})
 
                         
 

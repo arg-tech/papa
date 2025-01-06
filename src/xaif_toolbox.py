@@ -204,10 +204,21 @@ def remove_all_meta(xaif: dict, verbose=False) -> dict:
 
     # File has no OVA section: find meta nodes manually
     else:
+        # return xaif
         if verbose:
             print("No OVA section: removing based on 'Analysing' nodes")
         
         analysing_node_ids = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['text'] == 'Analysing' and n['type'] == 'YA']
+        
+        print("Node list:")
+        for n in xaif['AIF']['nodes']:
+            # if n['text'] == 'Analysing' and n['type'] == 'YA':
+            print('\t',n)
+        
+        print("Edge list:")
+        for e in xaif['AIF']['edges']:
+            # if e['toID'] in analysing_node_ids:
+            print('\t', e)
         ids_to_analysing = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in analysing_node_ids]
         metanode_ids = analysing_node_ids + ids_to_analysing
         if verbose:
@@ -470,20 +481,22 @@ def locution_markup_sort(old_xaif_text):
     return marked_loc_spans
 
 def add_loc_order(xaif, all_nodes, verbose=False):
-    loc_order = locution_markup_sort(xaif['text'])
-    counter = 1
+    try:
+        loc_order = locution_markup_sort(xaif['text'])
+        counter = 1
 
-    if verbose:
-        print(loc_order)
-        print(all_nodes.keys())
+        if verbose:
+            print(loc_order)
+            print(all_nodes.keys())
 
-    for num in loc_order:
-        try: 
-            all_nodes[num]['chron'] = counter
-            counter += 1
-        except KeyError:
-            print(f"Node {num} found in text but no node {num} found in node list")
-    
+        for num in loc_order:
+            try: 
+                all_nodes[num]['chron'] = counter
+                counter += 1
+            except KeyError:
+                print(f"Node {num} found in text but no node {num} found in node list")
+    except:
+        print("No text field found so cannot place locutions in correct order")
     return all_nodes
 
 

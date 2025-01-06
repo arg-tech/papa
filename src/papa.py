@@ -82,14 +82,29 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
 
         #Forecast-specific analytics
     if forecast:
+        print(xaif)
+        print("in forecast if")
         forecast_analytics_list = []
         forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
         forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
         subgraphs = analytics.getHypSubgraphs(xaif)
-        forecast_analytics_list.append(analytics.raCount(xaif))
-
+        print("subgraphs:")
+        print(subgraphs)
+        # forecast_analytics_list.append(analytics.raCount(xaif))
+        i = 0
         for graph in subgraphs:
-            forecast_analytics_list.append(analytics.raCount(graph))
+            i +=1
+            subgraph_list = []
+            print(graph)
+            subgraph_list.append(analytics.raCount(graph))
+            subgraph_list.append(analytics.caCount(graph))
+            subgraph_list.append(analytics.forecast_wc(graph))
+            # subgraph_list.append(analytics.max_ra_chain(graph))
+            # subgraph_list.append(analytics.ra_in_divergent(graph, speaker=False))
+            subgraph_list.append(analytics.arg_word_densities(graph, speaker=False, verbose=False, skip_altgive=True))
+            # subgraph_list.append(analytics.map_wordcount(graph))
+            forecast_analytics_list.append({("Hypothesis " + str(i)) : subgraph_list})
+
     
     xaif['analytics'] = {}
     xaif['analytics']['global'] = global_analytic_list
