@@ -2313,6 +2313,87 @@ def sentiment(xaif):
 
 
 
+#############################
+# Node-level -> Graph-level #
+#############################
+
+def avgTenseScores(xaif):
+    node_scores = nodeTenseScores(xaif)
+    tense_count = {'graph_tenses': {'past':0, 'present':0, 'base':0}}
+    for n in node_scores['node_tenses']:
+        tense_count['graph_tenses']['past'] += n['past']
+        tense_count['graph_tenses']['present'] += n['present']
+        tense_count['graph_tenses']['base'] += n['base']
+    
+    tense_count['graph_tenses']['past'] = tense_count['graph_tenses']['past']/len(node_scores['node_tenses'])
+    tense_count['graph_tenses']['present'] = tense_count['graph_tenses']['present']/len(node_scores['node_tenses'])
+    tense_count['graph_tenses']['base'] = tense_count['graph_tenses']['base']/len(node_scores['node_tenses'])
+
+    return tense_count
+
+# Explicitly 'arg struct' because the NER function is based on I-nodes
+def arg_struct_ner(xaif):
+    distinct_ner_list = ner(xaif)['named entities']
+    ner_dict = {}
+    for x in distinct_ner_list:
+        ident = f"{x['text']}_{x['label']}"
+        if ident not in ner_dict:
+            ner_dict[ident] = {'text': x['text'], 'label': x['label'], 'count': 1}
+            ner_dict[ident]['node id'] = [x['node id']]
+        else:
+            ner_dict[ident]['count'] += 1
+            ner_dict[ident]['node id'].append(x['node id'])
+    combo_ner = []
+    for _, val in ner_dict.items():
+        combo_ner.append(val)
+
+    return {'named entities': combo_ner}
+
+
+# Average sentiment values of the I-nodes
+def avg_inode_sentiment(xaif):
+    node_sentiment = sentiment(xaif)['sentiment']
+    avg_sentiment = {'avg_node_sentiment': {}}
+    pos = 0
+    neu = 0
+    neg = 0
+    comp = 0
+    
+    for n in node_sentiment:
+        pos += n['sentiment']['pos']
+        neg += n['sentiment']['neg']
+        neu += n['sentiment']['neu']
+        comp += n['sentiment']['compound']
+    
+    avg_sentiment['avg_node_sentiment']['neg'] = round(neg/len(node_sentiment), 3)
+    avg_sentiment['avg_node_sentiment']['neu'] = round(neu/len(node_sentiment), 3)
+    avg_sentiment['avg_node_sentiment']['pos'] = round(pos/len(node_sentiment), 3)
+    avg_sentiment['avg_node_sentiment']['compound'] = round(comp/len(node_sentiment), 4)
+
+    return avg_sentiment
+
+
+# Overall values of the argument part of the graph (recalculated from their text, not node avg)
+def arg_struct_sentiment(xaif):
+    sia = SentimentIntensityAnalyzer()
+    combo_text = ''
+
+    overall_sentiment = {}
+
+    inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    for node in inodes:
+        combo_text = combo_text + ' ' + node['text']
+    
+    sent = sia.polarity_scores(combo_text)
+    overall_sentiment['sentiment'] = sent
+    
+    return overall_sentiment
+
+
+
+############
+# FORECAST #
+############
 
 def addForecastAccuracy(xaif):
     print(xaif['text'])
