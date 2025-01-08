@@ -53,21 +53,28 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
                 
 
     # Global analytics
-    global_analytic_list = []
-    global_analytic_list.append(analytics.map_wordcount(xaif))
-    global_analytic_list.append(analytics.loc_counts(xaif, speaker=False))
-    global_analytic_list.append(analytics.arg_word_densities(xaif, speaker=False))
-    global_analytic_list.append(analytics.arg_loc_densities(xaif, speaker=False))
+    global_analytics = {}
+    global_analytics = global_analytics | analytics.map_wordcount(xaif)
+    global_analytics = global_analytics | analytics.loc_counts(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.arg_word_densities(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.arg_loc_densities(xaif, speaker=False)
 
-    global_analytic_list.append(analytics.ra_in_serial(xaif, speaker=False))
-    global_analytic_list.append(analytics.ra_in_convergent(xaif, speaker=False))
-    global_analytic_list.append(analytics.ra_in_divergent(xaif, speaker=False))
-    global_analytic_list.append(analytics.ra_in_linked(xaif, speaker=False))
+    global_analytics = global_analytics | analytics.ra_in_serial(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.ra_in_convergent(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.ra_in_divergent(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.ra_in_linked(xaif, speaker=False)
 
-    global_analytic_list.append(analytics.premise_count(xaif, speaker=False))
-    global_analytic_list.append(analytics.concl_count(xaif, speaker=False))
-    global_analytic_list.append(analytics.prem_concl_ratio(xaif, speaker=False))
-    global_analytic_list.append(analytics.ra_ca_ratio(xaif, speaker=False))
+    global_analytics = global_analytics | analytics.premise_count(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.concl_count(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.prem_concl_ratio(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.ra_ca_ratio(xaif, speaker=False)
+
+    global_analytics = global_analytics | analytics.avg_inode_sentiment(xaif)
+    global_analytics = global_analytics | analytics.arg_struct_sentiment(xaif)
+    global_analytics = global_analytics | analytics.avgTenseScores(xaif)
+    global_analytics = global_analytics | analytics.arg_struct_ner_types(xaif)
+    
+
 
     #Adding analytics which calculate 'per node'
     if node_level:
@@ -235,7 +242,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
 
     
     xaif['analytics'] = {}
-    xaif['analytics']['global'] = global_analytic_list
+    xaif['analytics']['global'] = global_analytics
 
     if speaker:
         xaif['analytics'] = {"speaker": spkr_rel_counts}
