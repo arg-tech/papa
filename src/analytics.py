@@ -33,9 +33,14 @@ def i_node_introducer(i_node, all_nodes):
 # Given the ID of an argument scheme node, return the ID of the L-node 
 def arg_rel_lnode(rel_node, all_nodes):
     ya_node_in = [n for n in all_nodes if all_nodes[n]['type'] == 'YA' and rel_node in all_nodes[n]['eout']][0]
-    ta_node_in = [n for n in all_nodes if all_nodes[n]['type'] == 'TA' and ya_node_in in all_nodes[n]['eout']][0]
+    # Usually anchored in TA: find descending L-node
+    try:
+        ta_node_in = [n for n in all_nodes if all_nodes[n]['type'] == 'TA' and ya_node_in in all_nodes[n]['eout']][0]
+        l_nodes_out = [n for n in all_nodes if all_nodes[n]['type'] == 'L' and ta_node_in in all_nodes[n]['ein']]
+    # If not anchored in TA, check for an L-node directly
+    except IndexError:
+        l_nodes_out = [n for n in all_nodes if all_nodes[n]['type'] == 'L' and ya_node_in in all_nodes[n]['eout']]
 
-    l_nodes_out = [n for n in all_nodes if all_nodes[n]['type'] == 'L' and ta_node_in in all_nodes[n]['ein']]
     if len(l_nodes_out) == 1:
         return l_nodes_out[0]
     else:
@@ -389,6 +394,36 @@ def arg_locword_densities(xaif, speaker=False, verbose=False, skip_altgive=False
             relation_counts['arg_locword_density'] = 0
 
     return relation_counts
+
+
+def ya_count(xaif, speaker=False, verbose=False):
+    ya_counter = {}
+    all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
+    if not speaker:
+        for ya in [all_nodes[n]['text'] for n in all_nodes if all_nodes[n]['type'] == 'YA']:
+            if ya not in ya_counter:
+                ya_counter[ya] = 1
+            else:
+                ya_counter[ya] += 1
+        return {'ya_counts': ya_counter}
+    else:
+        for spkr in said:
+            ya_counter[spkr] = {'ya_counts':{}}
+            spkr_yas = [all_nodes[n]['text'] for n in all_nodes if all_nodes[n]['type'] == 'YA' and spkr in all_nodes[n]['speaker']]
+            for ya in spkr_yas:
+                if ya not in ya_counter[spkr]['ya_counts']:
+                    ya_counter[spkr]['ya_counts'][ya] = 1
+                else:
+                    ya_counter[spkr]['ya_counts'][ya] += 1
+        return ya_counter
+    
+
+    all_restatement = [n for n in all_nodes if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == 'Restating']
+
+    for spkr in said:
+        spkr_restates = [n for n in all_restatement if spkr in all_nodes[n]['speaker']]
+        ya_counts[spkr] = {'restating_count': len(spkr_restates)}
+
 
 
 def restating_count(xaif, speaker=False, verbose=False):
@@ -1436,29 +1471,88 @@ def arg_intros(xaif, verbose=False):
             for relation_id in relation_id_list:
                 l_node = arg_rel_lnode(relation_id, all_nodes)
 
-                ya_type = [all_nodes[n]['text'] for n in all_nodes if all_nodes[n]['type'] == 'YA' 
-                    and l_node in all_nodes[n]['ein']]
-                
-                if verbose:
-                    print(f"Checking for {relation_txt} relation {relation_id}")
-                    print(f"Associated l-node found to be: {l_node}")
-                    print(f"\t{all_nodes[l_node]['text']}")
-                    print('\t', *ya_type)
+                # Check if edge-case anchored directly by L
+                direct_anchor = [ya for ya in all_nodes[l_node]['eout'] 
+                                 if all_nodes[ya]['type'] == 'YA'
+                                 and relation_id in all_nodes[ya]['eout']]
+                if len(direct_anchor) != 0:
+                    if verbose:
+                        print(f"{relation_txt} relation {relation_id} is directly anchored in L")
+                        
+                    # Special case, alt giving: it's alt-giving!
+                    yas_from_l = [all_nodes[ya]['text'] for ya in all_nodes[l_node]['eout'] if all_nodes[ya]['type'] == 'YA']
+                    if 'Alternative Giving' in yas_from_l:
+                        ya_type = 'Alternative Giving'
+                        if ya_type not in intro_yas[spkr]['arg_intros'][relation_txt]:
+                            intro_yas[spkr]['arg_intros'][relation_txt][ya_type] = 1
+                        else: 
+                            intro_yas[spkr]['arg_intros'][relation_txt][ya_type] += 1
 
-                
-                if len(ya_type) == 0:
-                    if verbose:
-                        print('no YAs found!')
-                        print(f'Relation: {relation_id} in {relation_txt} list {relation_id_list}')
-                elif len(ya_type) > 1:
-                    if verbose:
-                        print('too many YAs found!', ya_type)
-                        print(f'Relation: {relation_id} in {relation_txt} list {relation_id_list}')
+                    # Special case, evaluating: it's the other one!
+                    elif 'Evaluating' in yas_from_l:
+                        yas_from_l.remove('Evaluating')
+                        if len(yas_from_l) > 1:
+                            print("Too many YA-nodes from the source of Evaluating!")
+                        else:
+                            ya_type = yas_from_l[0]
+                            if ya_type not in intro_yas[spkr]['arg_intros'][relation_txt]:
+                                intro_yas[spkr]['arg_intros'][relation_txt][ya_type] = 1
+                            else: 
+                                intro_yas[spkr]['arg_intros'][relation_txt][ya_type] += 1
+                    else:
+                        print("Edge case: anchored in L-node but not Evaluating or Alternative Giving")
+
+                    
+                # Not edge-case: carry on
                 else:
-                    if ya_type[0] not in intro_yas[spkr]['arg_intros'][relation_txt]:
-                        intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]] = 1
-                    else: 
-                        intro_yas[spkr]['arg_intros'][relation_txt][ya_type[0]] += 1
+                    ya_type = [all_nodes[n]['text'] for n in all_nodes if all_nodes[n]['type'] == 'YA' 
+                        and l_node in all_nodes[n]['ein']]
+                    
+                    if verbose:
+                        print(f"Checking for {relation_txt} relation {relation_id}")
+                        print(f"Associated l-node found to be: {l_node}")
+                        print(f"\t{all_nodes[l_node]['text']}")
+                        print('\t', *ya_type)
+
+                    
+                    if len(ya_type) == 0:
+                        if verbose:
+                            print('no YAs found!')
+                            print(f'Relation: {relation_id} in {relation_txt} list {relation_id_list}')
+                    
+                    elif len(ya_type) > 1:
+                        # Check for Alternative Giving edge case – it's that
+                        if 'Alternative Giving' in ya_type:
+                            ya_type = 'Alternative Giving'
+                            if ya_type not in intro_yas[spkr]['arg_intros'][relation_txt]:
+                                intro_yas[spkr]['arg_intros'][relation_txt][ya_type] = 1
+                            else: 
+                                intro_yas[spkr]['arg_intros'][relation_txt][ya_type] += 1
+                        
+                        # Check for Evaluating edge case - it's the other one
+                        elif 'Evaluating' in ya_type:
+                            yas_from_l.remove('Evaluating')
+                            if len(yas_from_l) > 1:
+                                print("Too many YA-nodes from the source of Evaluating!")
+                                # Have already ruled out it being AG, the other 'valid'/trivial multi-YA
+                            else:
+                                ya_type = yas_from_l[0]
+                                if ya_type not in intro_yas[spkr]['arg_intros'][relation_txt]:
+                                    intro_yas[spkr]['arg_intros'][relation_txt][ya_type] = 1
+                                else: 
+                                    intro_yas[spkr]['arg_intros'][relation_txt][ya_type] += 1
+                        
+                        # Not an edge case, just weird
+                        else:
+                            if verbose:
+                                print('too many YAs found!', ya_type)
+                                print(f'Relation: {relation_id} in {relation_txt} list {relation_id_list}')
+                    else:
+                        ya_type = ya_type[0]
+                        if ya_type not in intro_yas[spkr]['arg_intros'][relation_txt]:
+                            intro_yas[spkr]['arg_intros'][relation_txt][ya_type] = 1
+                        else: 
+                            intro_yas[spkr]['arg_intros'][relation_txt][ya_type] += 1
 
             if verbose:
                 print()
@@ -2313,6 +2407,87 @@ def sentiment(xaif):
 
 
 
+#############################
+# Node-level -> Graph-level #
+#############################
+
+def avgTenseScores(xaif):
+    node_scores = nodeTenseScores(xaif)
+    tense_count = {'graph_tenses': {'past':0, 'present':0, 'base':0}}
+    for n in node_scores['node_tenses']:
+        tense_count['graph_tenses']['past'] += n['past']
+        tense_count['graph_tenses']['present'] += n['present']
+        tense_count['graph_tenses']['base'] += n['base']
+    
+    tense_count['graph_tenses']['past'] = tense_count['graph_tenses']['past']/len(node_scores['node_tenses'])
+    tense_count['graph_tenses']['present'] = tense_count['graph_tenses']['present']/len(node_scores['node_tenses'])
+    tense_count['graph_tenses']['base'] = tense_count['graph_tenses']['base']/len(node_scores['node_tenses'])
+
+    return tense_count
+
+# Explicitly 'arg struct' because the NER function is based on I-nodes
+def arg_struct_ner(xaif):
+    distinct_ner_list = ner(xaif)['named entities']
+    ner_dict = {}
+    for x in distinct_ner_list:
+        ident = f"{x['text']}_{x['label']}"
+        if ident not in ner_dict:
+            ner_dict[ident] = {'text': x['text'], 'label': x['label'], 'count': 1}
+            ner_dict[ident]['node id'] = [x['node id']]
+        else:
+            ner_dict[ident]['count'] += 1
+            ner_dict[ident]['node id'].append(x['node id'])
+    combo_ner = []
+    for _, val in ner_dict.items():
+        combo_ner.append(val)
+
+    return {'named entities': combo_ner}
+
+
+# Average sentiment values of the I-nodes
+def avg_inode_sentiment(xaif):
+    node_sentiment = sentiment(xaif)['sentiment']
+    avg_sentiment = {'avg_node_sentiment': {}}
+    pos = 0
+    neu = 0
+    neg = 0
+    comp = 0
+    
+    for n in node_sentiment:
+        pos += n['sentiment']['pos']
+        neg += n['sentiment']['neg']
+        neu += n['sentiment']['neu']
+        comp += n['sentiment']['compound']
+    
+    avg_sentiment['avg_node_sentiment']['neg'] = round(neg/len(node_sentiment), 3)
+    avg_sentiment['avg_node_sentiment']['neu'] = round(neu/len(node_sentiment), 3)
+    avg_sentiment['avg_node_sentiment']['pos'] = round(pos/len(node_sentiment), 3)
+    avg_sentiment['avg_node_sentiment']['compound'] = round(comp/len(node_sentiment), 4)
+
+    return avg_sentiment
+
+
+# Overall values of the argument part of the graph (recalculated from their text, not node avg)
+def arg_struct_sentiment(xaif):
+    sia = SentimentIntensityAnalyzer()
+    combo_text = ''
+
+    overall_sentiment = {}
+
+    inodes = [n for n in xaif['AIF']['nodes'] if n['type'] == "I"]
+    for node in inodes:
+        combo_text = combo_text + ' ' + node['text']
+    
+    sent = sia.polarity_scores(combo_text)
+    overall_sentiment['sentiment'] = sent
+    
+    return overall_sentiment
+
+
+
+############
+# FORECAST #
+############
 
 def addForecastAccuracy(xaif):
     print(xaif['text'])

@@ -575,7 +575,7 @@ def xaif_preanalytic_info_collection(xaif, verbose=False):
     all_nodes = add_edge_info(xaif, all_nodes)
 
     all_nodes, said = add_speakers(all_nodes, verbose=verbose)
-    all_nodes = add_assumed_speakers(all_nodes)
+    # all_nodes = add_assumed_speakers(all_nodes)
     all_nodes = add_agreement(all_nodes)
 
     all_nodes = add_loc_order(xaif, all_nodes)
