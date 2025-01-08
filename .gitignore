@@ -5,3 +5,5 @@ __pycache__/
 !forecast_fetch
 output/
 data/forecast_maps
+data/forecast_maps_full
+data/temp
