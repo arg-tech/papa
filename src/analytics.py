@@ -2462,7 +2462,7 @@ def arg_struct_ner_types(xaif):
     ner_types = {}
     for x in specific_ner:
         label = x['label']
-        if label not in ner_types:
+        if f"ne_type_{label}" not in ner_types:
             ner_types[f"ne_type_{label}"] = x['count']
         else:
             ner_types[f"ne_type_{label}"] += x['count']
