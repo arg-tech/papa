@@ -89,6 +89,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         print("in forecast if")
         forecast_analytics_list = []
         forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
+        forecast_analytics_list.append(analytics.addCorrectnessClassification(xaif))
         forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
         subgraphs = analytics.getHypSubgraphs(xaif)
         print("subgraphs:")
@@ -129,7 +130,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         sd_df = pd.DataFrame
         column_names = []
         index = 0
-        print(forecast_analytics_list)
+        # print(forecast_analytics_list)
         for values in forecast_analytics_list:
                 if values:
                     item_pairs = values.items()
@@ -139,11 +140,11 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
                         print("Lengths not equal")
                 
                     for key, value in item_pairs:
-                        print(key)
-                        print(value)
+                        # print(key)
+                        # print(value)
                         row = []
                         if "Hypothesis" in key:
-                            print("we got a hypothesis")
+                            # print("we got a hypothesis")
 
                             for item in value:
                                 analytic_pair = item.items()
@@ -170,22 +171,22 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
                             sd_df = pd.DataFrame(data, index=[key])
                             # df = pd.DataFrame(map_id:row, columns=column_names)
                     
-                    print(sd_df)
-                    sd_df.to_csv('out.csv', index=False)  
+                    # print(sd_df)
+                    # sd_df.to_csv('out.csv', index=False)  
 
 
         ## TO ADD: FOR EACH COLUMN, RUN STANDARD DEVIATION SCRIPT
         for (columnName, columnData) in sd_df.items():
-            print('Column Name : ', columnName)
-            print('Column Contents : ', columnData.values)
+            # print('Column Name : ', columnName)
+            # print('Column Contents : ', columnData.values)
 
             values_list = []
             for num in columnData.values:
                 values_list.append(float(num))
 
-            print(values_list)
+            # print(values_list)
             result = statistics.stdev(values_list)
-            print({columnName + "_sd": result})
+            # print({columnName + "_sd": result})
             forecast_analytics_list.append({columnName + "_sd": result})
 
 
