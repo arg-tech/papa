@@ -2411,17 +2411,30 @@ def sentiment(xaif):
 # Node-level -> Graph-level #
 #############################
 
-def avgTenseScores(xaif):
+def avgTenseScores(xaif, flat=True):
     node_scores = nodeTenseScores(xaif)
-    tense_count = {'graph_tenses': {'past':0, 'present':0, 'base':0}}
-    for n in node_scores['node_tenses']:
-        tense_count['graph_tenses']['past'] += n['past']
-        tense_count['graph_tenses']['present'] += n['present']
-        tense_count['graph_tenses']['base'] += n['base']
-    
-    tense_count['graph_tenses']['past'] = tense_count['graph_tenses']['past']/len(node_scores['node_tenses'])
-    tense_count['graph_tenses']['present'] = tense_count['graph_tenses']['present']/len(node_scores['node_tenses'])
-    tense_count['graph_tenses']['base'] = tense_count['graph_tenses']['base']/len(node_scores['node_tenses'])
+    if not flat:
+        tense_count = {'graph_tenses': {'past':0, 'present':0, 'base':0}}
+        for n in node_scores['node_tenses']:
+            tense_count['graph_tenses']['past'] += n['past']
+            tense_count['graph_tenses']['present'] += n['present']
+            tense_count['graph_tenses']['base'] += n['base']
+        
+        tense_count['graph_tenses']['past'] = tense_count['graph_tenses']['past']/len(node_scores['node_tenses'])
+        tense_count['graph_tenses']['present'] = tense_count['graph_tenses']['present']/len(node_scores['node_tenses'])
+        tense_count['graph_tenses']['base'] = tense_count['graph_tenses']['base']/len(node_scores['node_tenses'])
+
+    else:
+        tense_count = {'graph_tenses_past': 0, 'graph_tenses_present': 0, 'graph_tenses_base': 0}
+        for n in node_scores['node_tenses']:
+            tense_count['graph_tenses_past'] += n['past']
+            tense_count['graph_tenses_present'] += n['present']
+            tense_count['graph_tenses_base'] += n['base']
+        
+        tense_count['graph_tenses_past'] = tense_count['graph_tenses_past']/len(node_scores['node_tenses'])
+        tense_count['graph_tenses_present'] = tense_count['graph_tenses_present']/len(node_scores['node_tenses'])
+        tense_count['graph_tenses_base'] = tense_count['graph_tenses_base']/len(node_scores['node_tenses'])
+
 
     return tense_count
 
@@ -2444,10 +2457,24 @@ def arg_struct_ner(xaif):
     return {'named entities': combo_ner}
 
 
+def arg_struct_ner_types(xaif):
+    specific_ner = arg_struct_ner(xaif)['named entities']
+    ner_types = {}
+    for x in specific_ner:
+        label = x['label']
+        if f"ne_type_{label}" not in ner_types:
+            ner_types[f"ne_type_{label}"] = x['count']
+        else:
+            ner_types[f"ne_type_{label}"] += x['count']
+    return ner_types
+
+
+
 # Average sentiment values of the I-nodes
-def avg_inode_sentiment(xaif):
+def avg_inode_sentiment(xaif, flat=True):
     node_sentiment = sentiment(xaif)['sentiment']
-    avg_sentiment = {'avg_node_sentiment': {}}
+    # avg_sentiment = {'avg_node_sentiment': {}}
+    avg_sentiment = {}
     pos = 0
     neu = 0
     neg = 0
@@ -2458,17 +2485,25 @@ def avg_inode_sentiment(xaif):
         neg += n['sentiment']['neg']
         neu += n['sentiment']['neu']
         comp += n['sentiment']['compound']
-    
-    avg_sentiment['avg_node_sentiment']['neg'] = round(neg/len(node_sentiment), 3)
-    avg_sentiment['avg_node_sentiment']['neu'] = round(neu/len(node_sentiment), 3)
-    avg_sentiment['avg_node_sentiment']['pos'] = round(pos/len(node_sentiment), 3)
-    avg_sentiment['avg_node_sentiment']['compound'] = round(comp/len(node_sentiment), 4)
+
+
+    if not flat:
+        avg_sentiment = {'avg_node_sentiment':{}}
+        avg_sentiment['avg_node_sentiment']['neg'] = round(neg/len(node_sentiment), 3)
+        avg_sentiment['avg_node_sentiment']['neu'] = round(neu/len(node_sentiment), 3)
+        avg_sentiment['avg_node_sentiment']['pos'] = round(pos/len(node_sentiment), 3)
+        avg_sentiment['avg_node_sentiment']['compound'] = round(comp/len(node_sentiment), 4)
+    else:
+        avg_sentiment['avg_node_sentiment_neg'] = round(neg/len(node_sentiment), 3)
+        avg_sentiment['avg_node_sentiment_neu'] = round(neu/len(node_sentiment), 3)
+        avg_sentiment['avg_node_sentiment_pos'] = round(pos/len(node_sentiment), 3)
+        avg_sentiment['avg_node_sentiment_compound'] = round(comp/len(node_sentiment), 4)
 
     return avg_sentiment
 
 
 # Overall values of the argument part of the graph (recalculated from their text, not node avg)
-def arg_struct_sentiment(xaif):
+def arg_struct_sentiment(xaif, flat=True):
     sia = SentimentIntensityAnalyzer()
     combo_text = ''
 
@@ -2479,7 +2514,18 @@ def arg_struct_sentiment(xaif):
         combo_text = combo_text + ' ' + node['text']
     
     sent = sia.polarity_scores(combo_text)
-    overall_sentiment['sentiment'] = sent
+    
+    if not flat:
+        overall_sentiment = {'arg_sentiment': {}}
+        overall_sentiment['arg_sentiment']['pos'] = sent['pos']
+        overall_sentiment['arg_sentiment']['neu'] = sent['neu']
+        overall_sentiment['arg_sentiment']['neg'] = sent['neg']
+        overall_sentiment['arg_sentiment']['compound'] = sent['compound']
+    else:
+        overall_sentiment['arg_sentiment_pos'] = sent['pos']
+        overall_sentiment['arg_sentiment_neu'] = sent['neu']
+        overall_sentiment['arg_sentiment_neg'] = sent['neg']
+        overall_sentiment['arg_sentiment_compound'] = sent['compound']
     
     return overall_sentiment
 
