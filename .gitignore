@@ -6,4 +6,5 @@ __pycache__/
 output/
 data/forecast_maps
 data/forecast_maps_full
+data/forecast_maps_all
 data/temp
