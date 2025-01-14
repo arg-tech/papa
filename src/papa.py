@@ -59,6 +59,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytics = global_analytics | analytics.arg_word_densities(xaif, speaker=False)
     global_analytics = global_analytics | analytics.arg_loc_densities(xaif, speaker=False)
 
+
     global_analytics = global_analytics | analytics.ra_in_serial(xaif, speaker=False)
     global_analytics = global_analytics | analytics.ra_in_convergent(xaif, speaker=False)
     global_analytics = global_analytics | analytics.ra_in_divergent(xaif, speaker=False)
@@ -72,7 +73,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytics = global_analytics | analytics.avg_inode_sentiment(xaif)
     global_analytics = global_analytics | analytics.arg_struct_sentiment(xaif)
     global_analytics = global_analytics | analytics.avgTenseScores(xaif)
-    global_analytics = global_analytics | analytics.arg_struct_ner_types(xaif)
+    # global_analytics = global_analytics | analytics.arg_struct_ner_types(xaif)
     
 
 
@@ -85,6 +86,11 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         node_analytic_list.append(analytics.nodeTenseScores(xaif))
         node_analytic_list.append(analytics.ner(xaif))
         node_analytic_list.append(analytics.sentiment(xaif))
+
+        forecast_analytics_list.append(analytics.avgTenseScores(xaif))
+        forecast_analytics_list.append(analytics.arg_struct_ner(xaif))
+        forecast_analytics_list.append(analytics.avg_inode_sentiment(xaif))
+        forecast_analytics_list.append(analytics.arg_struct_sentiment(xaif))
         print(node_analytic_list)
 
         # print(node_analytic_list)
@@ -128,6 +134,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
             subgraph_list.append(analytics.arg_word_densities(graph, speaker=False, verbose=False, skip_altgive=True))
             subgraph_list.append(analytics.ra_ca_ratio(graph, speaker=False))
             subgraph_list.append(analytics.prem_concl_ratio(graph, speaker=False))
+
 
             # subgraph_list.append(analytics.map_wordcount(graph))
             forecast_analytics_list.append({("Hypothesis " + str(i)) : subgraph_list})
