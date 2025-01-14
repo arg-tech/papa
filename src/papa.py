@@ -75,7 +75,9 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytics = global_analytics | analytics.avgTenseScores(xaif)
     # global_analytics = global_analytics | analytics.arg_struct_ner_types(xaif)
     
-
+    # ! This shouldn't be have chron=False in general, but it'll keep the measure consistent between the Forecast subgraphs and full graph
+    # (since subgraphs don't have temporal information)
+    global_analytics = global_analytics | analytics.conflict_support_attack(xaif, chron=False)
 
     #Adding analytics which calculate 'per node'
     if node_level:
@@ -134,6 +136,8 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
             subgraph_list.append(analytics.arg_word_densities(graph, speaker=False, verbose=False, skip_altgive=True))
             subgraph_list.append(analytics.ra_ca_ratio(graph, speaker=False))
             subgraph_list.append(analytics.prem_concl_ratio(graph, speaker=False))
+
+            subgraph_list.append(analytics.conflict_support_attack(graph, chron=False))
 
 
             # subgraph_list.append(analytics.map_wordcount(graph))

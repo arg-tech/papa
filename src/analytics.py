@@ -193,7 +193,7 @@ def loc_counts(xaif, speaker=False, verbose=False):
 
 
 
-def arg_relation_counts(xaif, speaker=False, verbose=False, skip_altgive=False):
+def arg_relation_counts(xaif, speaker=False, verbose=False, skip_altgive=True):
     relation_counts = {}
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
@@ -236,7 +236,7 @@ def arg_relation_counts(xaif, speaker=False, verbose=False, skip_altgive=False):
 
     return relation_counts
 
-def ra_ca_ratio(xaif, speaker=False, verbose=False, skip_altgive=False):
+def ra_ca_ratio(xaif, speaker=False, verbose=False, skip_altgive=True):
     rel_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
     
     ra_to_ca = {}
@@ -258,7 +258,7 @@ def ra_ca_ratio(xaif, speaker=False, verbose=False, skip_altgive=False):
     return ra_to_ca
 
 # Density based on textfield wordcount
-def arg_word_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+def arg_word_densities(xaif, speaker=False, verbose=False, skip_altgive=True):
     relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
 
     if speaker:
@@ -307,7 +307,7 @@ def arg_word_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
     return relation_counts
 
 # Density based on number of locutions
-def arg_loc_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+def arg_loc_densities(xaif, speaker=False, verbose=False, skip_altgive=True):
     relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
     l_counts = loc_counts(xaif, speaker=speaker)
 
@@ -350,7 +350,7 @@ def arg_loc_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
 
 
 # Density relative to wordcount from locutions
-def arg_locword_densities(xaif, speaker=False, verbose=False, skip_altgive=False):
+def arg_locword_densities(xaif, speaker=False, verbose=False, skip_altgive=True):
     relation_counts = arg_relation_counts(xaif, speaker=speaker, skip_altgive=skip_altgive)
 
     if speaker:
@@ -1023,7 +1023,7 @@ def ra_in_linked(xaif, speaker=False, verbose=False):
     return ra_linked
 
 
-def conflict_self(xaif, debug=False):
+def conflict_self(xaif, verbose=False, skip_altgive=True):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1031,6 +1031,13 @@ def conflict_self(xaif, debug=False):
     
     conflict_count = {}
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    if skip_altgive:
+        alt_gives = [n for n in all_nodes 
+                        if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == 'Alternative Giving']
+        if verbose:
+            print(f"Alt-giving nodes: ", alt_gives)
+        # Remove any CAs with an incoming edge from an Alternative Giving node
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(alt_gives)]
 
     for spkr in said:
         conflict_count[spkr]= {'self_conflicts': 0}
@@ -1050,11 +1057,15 @@ def circular_args(xaif):
     pass
 
 
-def ca_undercut(xaif, speaker=False, verbose=False):
+def ca_undercut(xaif, speaker=False, verbose=False, skip_altgive=True):
     all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
 
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
     ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+
+    if skip_altgive:
+        alt_give_yas = [n for n in all_nodes if all_nodes[n]['text'] == 'Alternative Giving' and all_nodes[n]['type'] == 'YA']
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(set(alt_give_yas))]
 
     undercut_count = {}
     if speaker:
@@ -1072,7 +1083,7 @@ def ca_undercut(xaif, speaker=False, verbose=False):
     return undercut_count
 
 
-def ca_rebut(xaif, speaker=False, verbose=False, skip_altgive=False):
+def ca_rebut(xaif, speaker=False, verbose=False, skip_altgive=True):
     all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
 
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
@@ -1104,7 +1115,7 @@ def ca_rebut(xaif, speaker=False, verbose=False, skip_altgive=False):
 # Breadth and depth #
 #####################
 
-def initial_arg(xa_id, seen_xas, all_nodes, speaker=False, rel_type='RA', skip_altgive=False, verbose=False):
+def initial_arg(xa_id, seen_xas, all_nodes, speaker=False, rel_type='RA', skip_altgive=True, verbose=False):
     seen_xas = seen_xas + [xa_id]
     
     if rel_type == 'CA' and skip_altgive:
@@ -1217,7 +1228,7 @@ def path_lens_from_arg(xa_id, seen_xas, all_nodes, rel_type='RA', speaker=False,
     return path_list
 
 
-def arg_depths(xaif, rel_type='RA', speaker=False, verbose=False, skip_altgive=False):
+def arg_depths(xaif, rel_type='RA', speaker=False, verbose=False, skip_altgive=True):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1298,8 +1309,8 @@ def max_ra_chain(xaif, speaker=False, verbose=False):
 
 
 
-def max_ca_chain(xaif, speaker=False, verbose=False):
-    all_depths = arg_depths(xaif, speaker=speaker, verbose=verbose, rel_type='CA')
+def max_ca_chain(xaif, speaker=False, verbose=False, skip_altgive=True):
+    all_depths = arg_depths(xaif, speaker=speaker, verbose=verbose, skip_altgive=skip_altgive, rel_type='CA')
     if speaker:
         max_ca = {}
         for spkr in all_depths:
@@ -1868,8 +1879,82 @@ def follow_questions(xaif, debug=False):
     return following_questions
             
 
+# Count of initial nodes of conflicts which themselves receive support and/or further attack.
+# Note that if chron is set to false, it will count Alt-Giving as attacks on attacks unless set to skip altgive
+def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
+    if 'AIF' in xaif.keys():
+        all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
+    else:
+        all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
 
-def conflict_support(xaif, debug=False):
+    conflict_support = {'ca_source_attacked': 0, 'ca_source_supported': 0}
+            
+    # Create tuples with IDs of i-nodes and ca node in conflicts
+    conflict_tuples = []
+    ca_nodes = [c for c in all_nodes if all_nodes[c]['type'] == 'CA']
+    if skip_altgive:
+        alt_gives = [n for n in all_nodes 
+                        if all_nodes[n]['type'] == 'YA' 
+                        and all_nodes[n]['text'] == 'Alternative Giving']
+        if verbose:
+            print(f"Alt-giving nodes: ", alt_gives)
+        # Remove any CAs with an incoming edge from an Alternative Giving node
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(alt_gives)]
+    
+    # create tuples (attacker prop id, ca ID, attacked prop id)
+    for ca in ca_nodes:
+        conflict_tuples = conflict_tuples + [([i for i in all_nodes if i in all_nodes[ca]['ein'] and all_nodes[i]['type'] == 'I'][0], 
+                                            ca,
+                                            [i for i in all_nodes if i in all_nodes[ca]['eout'] and all_nodes[i]['type'] == 'I'][0])]
+
+    for tup in conflict_tuples:
+        i_ca_premise_loc = all_nodes[tup[0]]['introby'][0]
+        
+        # Look for supports and attacks incoming to the attacking prop
+        support = [n for n in all_nodes if all_nodes[n]['type'] == 'RA' and n in all_nodes[tup[0]]['ein']]
+        attack = [n for n in all_nodes if all_nodes[n]['type'] == 'CA' and n in all_nodes[tup[0]]['ein']]
+
+        for s in support:
+            supp_premises = [n for n in all_nodes[s]['ein'] if all_nodes[n]['type'] == 'I']
+            for prem in supp_premises:
+                # Check relationship was created after the conflict was introduced
+                supp_premise_loc = all_nodes[prem]['introby'][0]
+                
+                # if some info not available, continue but print a warning unless flag set to ignore temporal order
+                if all_nodes[supp_premise_loc]['chron'] == -1 or  all_nodes[i_ca_premise_loc]['chron'] == -1 or not chron:
+                    if chron:
+                        # Condition met due to missing info
+                        print("No chrono ordering info recorded: cannot account for ordering in attacks/supports on attacker prop.")
+                    conflict_support['ca_source_supported'] += 1
+                # if later than the attacking proposition, it's relevant
+
+                elif all_nodes[supp_premise_loc]['chron'] > all_nodes[i_ca_premise_loc]['chron']:
+                    conflict_support['ca_source_supported'] += 1
+    
+        for a in attack:
+            attk_premises = [n for n in all_nodes[a]['ein'] if all_nodes[n]['type'] == 'I']
+            for prem in attk_premises:
+            # Check attack was created after the initial conflict was introduced
+                attk_premise_loc = all_nodes[prem]['introby'][0]
+
+                # if some info not available, continue but print a warning unless flag set to ignore temporal order
+                if all_nodes[attk_premise_loc]['chron'] == -1 or  all_nodes[i_ca_premise_loc]['chron'] == -1 or not chron:
+                    if chron:
+                        # Condition met due to missing info
+                        print("No chrono info recorded: cannot account for ordering in attacks/supports on attacker prop.")
+                    conflict_support['ca_source_attacked'] += 1
+
+                # if later than the attacking proposition, it's relevant
+                elif all_nodes[attk_premise_loc]['chron'] > all_nodes[i_ca_premise_loc]['chron']:
+                    conflict_support['ca_source_attacked'] += 1
+    
+
+    return conflict_support
+
+
+
+
+def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1882,7 +1967,17 @@ def conflict_support(xaif, debug=False):
 
     # Create tuples with IDs of i-nodes and ca node in conflicts
     conflict_tuples = []
-    for ca in [c for c in all_nodes if all_nodes[c]['type'] == 'CA']:
+    ca_nodes = [c for c in all_nodes if all_nodes[c]['type'] == 'CA']
+    if skip_altgive:
+        alt_gives = [n for n in all_nodes 
+                        if all_nodes[n]['type'] == 'YA' 
+                        and all_nodes[n]['text'] == 'Alternative Giving']
+        if verbose:
+            print(f"Alt-giving nodes: ", alt_gives)
+        # Remove any CAs with an incoming edge from an Alternative Giving node
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(alt_gives)]
+    
+    for ca in ca_nodes:
         conflict_tuples = conflict_tuples + [([i for i in all_nodes if i in all_nodes[ca]['ein'] and all_nodes[i]['type'] == 'I'][0], 
                                             ca,
                                             [i for i in all_nodes if i in all_nodes[ca]['eout'] and all_nodes[i]['type'] == 'I'][0])]
@@ -2340,21 +2435,68 @@ def node_wc(xaif):
 
 #Returns count of I nodes with incoming RA
 def supportedNodes(xaif):
+    all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
 
+    i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I']
+    ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+    
+    supported_nodes = {'supported_nodes': 0}
+    for i in i_nodes:
+        # If intersection between the incoming nodes to the I and the RA-nodes, count it as supported
+        if set(all_nodes[i]['ein']) & set(ra_nodes):
+            supported_nodes['supported_nodes'] += 1
+
+    return supported_nodes
+
+def old_supportForNodes(xaif):
     inodes = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "I"]
     inode_incoming = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in inodes]
 
     supportNodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in inode_incoming and n['type'] == 'RA']
-    return {"supported_nodes": len(supportNodes)}
+    return {"supports_for_nodes": len(supportNodes)}
+
 
 #Returns number of I nodes with incoming CA
-def attackedNodes(xaif):
+def attackedNodes(xaif, verbose=False, skip_altgive=True):
+    all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
+
+    i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I']
+    ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    
+    if skip_altgive:
+        alt_gives = [n for n in all_nodes 
+                        if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == 'Alternative Giving']
+        if verbose:
+            print(f"Alt-giving nodes: ", alt_gives)
+        # Remove any CAs with an incoming edge from an Alternative Giving node
+        ca_nodes = [n for n in ca_nodes if not set(all_nodes[n]['ein']).intersection(alt_gives)]
+
+    attacked_nodes = {'attacked_nodes': 0}
+    for i in i_nodes:
+        # If intersection between the incoming nodes to the I and the CA-nodes, count it as attacked
+        if set(all_nodes[i]['ein']) & set(ca_nodes):
+            attacked_nodes['attacked_nodes'] += 1
+
+    return attacked_nodes
+
+def old_attacksOnNodes(xaif, verbose=False, skip_altgive=True):
     inodes = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "I"]
     inode_incoming = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in inodes]
 
     attackNodes = [n for n in xaif['AIF']['nodes'] if n['nodeID'] in inode_incoming and n['type'] == 'CA']
-    
-    return {"attacked_nodes": len(attackNodes)}
+
+    if skip_altgive:
+        alt_gives = [n['nodeID'] for n in xaif['AIF']['nodes']
+                      if n['type'] == 'YA' 
+                      and n['text'] == 'Alternative Giving']
+        anchored_by_alt_give = [e['toID'] for e in xaif['AIF']['edges'] if e['fromID'] in alt_gives]
+        if len(alt_gives) != 0:
+            if verbose:
+                print(f"Found Alternative Giving YAs ", alt_gives, f" anchoring {len(anchored_by_alt_give)} nodes.")
+            # Remove any CAs with an incoming edge from an Alternative Giving node
+            attackNodes = [n for n in attackNodes if n['nodeID'] not in anchored_by_alt_give]
+
+    return {"attacks_on_nodes": len(attackNodes)}
 
 # Verb tags: https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
 # NLTK tagger: https://www.nltk.org/book/ch05.html
@@ -2830,8 +2972,22 @@ def raCount(xaif):
     ra_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'RA']
     return {"ra_count" : len(ra_nodes)}
 
-def caCount(xaif):
+def caCount(xaif, verbose=False, skip_altgive=True):
     ca_nodes = [n for n in xaif['AIF']['nodes'] if n['type'] == 'CA']
+    
+    if skip_altgive:
+        alt_gives = [n['nodeID'] for n in xaif['AIF']['nodes']
+                      if n['type'] == 'YA' 
+                      and n['text'] == 'Alternative Giving']
+        
+        anchored_by_alt_give = [e['toID'] for e in xaif['AIF']['edges'] if e['fromID'] in alt_gives]
+        if len(alt_gives) != 0:
+            if verbose:
+                print(f"Found Alternative Giving YAs ", alt_gives, f" anchoring {len(anchored_by_alt_give)} nodes.")
+            # Remove any CAs with an incoming edge from an Alternative Giving node
+            ca_nodes = [n for n in ca_nodes if n['nodeID'] not in anchored_by_alt_give]
+
+
     return {"ca_count" : len(ca_nodes)}
 
 def forecast_wc(xaif):
