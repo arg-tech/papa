@@ -2678,7 +2678,7 @@ def arg_struct_sentiment(xaif, flat=True):
 ############
 
 def addForecastAccuracy(xaif):
-    print(xaif['text'])
+    # print(xaif['text'])
     try:
         match = re.search(r"Part ID: ?\d+", xaif['text'])
         match_span = match.span()
@@ -2687,13 +2687,28 @@ def addForecastAccuracy(xaif):
             csvfile = csv.reader(file)
             for line in csvfile:
                 if line[1] == id:
-                    print("In IF")
                     if line[16] != "unknown":
                         return {"accuracy": line[16]}
                     else:
                         return {"accuracy": "unknown"}
     except:
         print("No Part ID found")
+
+def addCorrectnessClassification(xaif):
+    # try:
+    match = re.search(r"Part ID: ?\d+", xaif['text'])
+    match_span = match.span()
+    id = match.string[8:match_span[1]]
+    with open ('forecast750_brier.csv', 'r') as file:
+        csvfile = csv.reader(file)
+        for line in csvfile:
+            if line[1] == id:
+                if line[18] != "unknown":
+                    return {"correctness": line[18]}
+                else:
+                    return {"correctness": "unknown"}
+# except:
+    #     print("No Part ID found")
     
 def addNodeOutcomes(xaif):
     match = re.search(r"Part ID: ?\d+", xaif['text'])
@@ -2718,8 +2733,8 @@ def addNodeOutcomes(xaif):
                     # print(match)
                     if match != None:
                         match_span = match.span()
-                        print("match span")
-                        print(match_span)
+                        # print("match span")
+                        # print(match_span)
                         match_split = match.string[match_span[0]:match_span[1]].split()
                         probability = match_split[1]
                         if probability in probability_list:
@@ -2750,13 +2765,13 @@ def addNodeOutcomes(xaif):
     
 
 def getHypSubgraphs(xaif):
-    print("in get hyp subgraphs")
-    print(xaif)
+    # print("in get hyp subgraphs")
+    # print(xaif)
 
     subgraphs = []
 
     inode_ids = [n['nodeID'] for n in xaif['AIF']['nodes'] if n['type'] == "I"]
-    print(inode_ids)
+    # print(inode_ids)
     nodetoinode = [e['fromID'] for e in xaif['AIF']['edges'] if e['toID'] in inode_ids]
 
     #Get YA "Hypothesising" nodes
@@ -2768,7 +2783,7 @@ def getHypSubgraphs(xaif):
         hyp_inodes = []
         inode = [e['toID'] for e in xaif['AIF']['edges'] if e['fromID'] == hnode]
         hyp_inodes.append(inode[0])
-        print("Inodes anchored in YA Hypothesising: " + str(hyp_inodes))
+        # print("Inodes anchored in YA Hypothesising: " + str(hyp_inodes))
     
         #Get incoming nodes to Hypothesising YA-Anchored I-nodes
         s_nodes = []
@@ -2786,7 +2801,7 @@ def getHypSubgraphs(xaif):
                     if node['nodeID'] == id and node['type'] == "I":
                         inodes1.append(id)
         #I nodes with forecasts and probabilities
-        print("Level 1 inodes: " + str(inodes1))
+        # print("Level 1 inodes: " + str(inodes1))
 
         #Loop through nodes connected to forecast I-node
         current_node = ''
@@ -2977,7 +2992,7 @@ def caCount(xaif, verbose=False, skip_altgive=True):
 
 def forecast_wc(xaif):
     wc_per_node = node_wc(xaif)
-    print(wc_per_node)
+    # print(wc_per_node)
     sum = 0
     for node in wc_per_node['word_count']:
         num = node.get("word count:")

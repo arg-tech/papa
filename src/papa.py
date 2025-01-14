@@ -59,6 +59,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytics = global_analytics | analytics.arg_word_densities(xaif, speaker=False)
     global_analytics = global_analytics | analytics.arg_loc_densities(xaif, speaker=False)
 
+
     global_analytics = global_analytics | analytics.ra_in_serial(xaif, speaker=False)
     global_analytics = global_analytics | analytics.ra_in_convergent(xaif, speaker=False)
     global_analytics = global_analytics | analytics.ra_in_divergent(xaif, speaker=False)
@@ -72,7 +73,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytics = global_analytics | analytics.avg_inode_sentiment(xaif)
     global_analytics = global_analytics | analytics.arg_struct_sentiment(xaif)
     global_analytics = global_analytics | analytics.avgTenseScores(xaif)
-    global_analytics = global_analytics | analytics.arg_struct_ner_types(xaif)
+    # global_analytics = global_analytics | analytics.arg_struct_ner_types(xaif)
     
     # ! This shouldn't be have chron=False in general, but it'll keep the measure consistent between the Forecast subgraphs and full graph
     # (since subgraphs don't have temporal information)
@@ -87,6 +88,11 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         node_analytic_list.append(analytics.nodeTenseScores(xaif))
         node_analytic_list.append(analytics.ner(xaif))
         node_analytic_list.append(analytics.sentiment(xaif))
+
+        # forecast_analytics_list.append(analytics.avgTenseScores(xaif))
+        # forecast_analytics_list.append(analytics.arg_struct_ner(xaif))
+        # forecast_analytics_list.append(analytics.avg_inode_sentiment(xaif))
+        # forecast_analytics_list.append(analytics.arg_struct_sentiment(xaif))
         print(node_analytic_list)
 
         # print(node_analytic_list)
@@ -98,6 +104,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         print("in forecast if")
         forecast_analytics_list = []
         forecast_analytics_list.append(analytics.addForecastAccuracy(xaif))
+        forecast_analytics_list.append(analytics.addCorrectnessClassification(xaif))
         forecast_analytics_list.append(analytics.addNodeOutcomes(xaif))
         subgraphs = analytics.getHypSubgraphs(xaif)
         print("subgraphs:")
@@ -132,6 +139,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
 
             subgraph_list.append(analytics.conflict_support_attack(graph, chron=False))
 
+
             # subgraph_list.append(analytics.map_wordcount(graph))
             forecast_analytics_list.append({("Hypothesis " + str(i)) : subgraph_list})
 
@@ -140,7 +148,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         sd_df = pd.DataFrame
         column_names = []
         index = 0
-        print(forecast_analytics_list)
+        # print(forecast_analytics_list)
         for values in forecast_analytics_list:
                 if values:
                     item_pairs = values.items()
@@ -150,11 +158,11 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
                         print("Lengths not equal")
                 
                     for key, value in item_pairs:
-                        print(key)
-                        print(value)
+                        # print(key)
+                        # print(value)
                         row = []
                         if "Hypothesis" in key:
-                            print("we got a hypothesis")
+                            # print("we got a hypothesis")
 
                             for item in value:
                                 analytic_pair = item.items()
@@ -181,22 +189,22 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
                             sd_df = pd.DataFrame(data, index=[key])
                             # df = pd.DataFrame(map_id:row, columns=column_names)
                     
-                    print(sd_df)
-                    sd_df.to_csv('out.csv', index=False)  
+                    # print(sd_df)
+                    # sd_df.to_csv('out.csv', index=False)  
 
 
         ## TO ADD: FOR EACH COLUMN, RUN STANDARD DEVIATION SCRIPT
         for (columnName, columnData) in sd_df.items():
-            print('Column Name : ', columnName)
-            print('Column Contents : ', columnData.values)
+            # print('Column Name : ', columnName)
+            # print('Column Contents : ', columnData.values)
 
             values_list = []
             for num in columnData.values:
                 values_list.append(float(num))
 
-            print(values_list)
+            # print(values_list)
             result = statistics.stdev(values_list)
-            print({columnName + "_sd": result})
+            # print({columnName + "_sd": result})
             forecast_analytics_list.append({columnName + "_sd": result})
 
 
