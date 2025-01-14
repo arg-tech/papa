@@ -87,10 +87,10 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         node_analytic_list.append(analytics.ner(xaif))
         node_analytic_list.append(analytics.sentiment(xaif))
 
-        forecast_analytics_list.append(analytics.avgTenseScores(xaif))
-        forecast_analytics_list.append(analytics.arg_struct_ner(xaif))
-        forecast_analytics_list.append(analytics.avg_inode_sentiment(xaif))
-        forecast_analytics_list.append(analytics.arg_struct_sentiment(xaif))
+        # forecast_analytics_list.append(analytics.avgTenseScores(xaif))
+        # forecast_analytics_list.append(analytics.arg_struct_ner(xaif))
+        # forecast_analytics_list.append(analytics.avg_inode_sentiment(xaif))
+        # forecast_analytics_list.append(analytics.arg_struct_sentiment(xaif))
         print(node_analytic_list)
 
         # print(node_analytic_list)
