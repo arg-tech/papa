@@ -1158,7 +1158,7 @@ def initial_arg(xa_id, seen_xas, all_nodes, speaker=False, rel_type='RA', skip_a
         else:
             xas_in = [n for n in xa_nodes if all_nodes[n]['nodeID'] in all_nodes[i_premise]['ein'] and all_nodes[n]['type'] == rel_type]
 
-        if skip_altgive:
+        if rel_type == 'CA' and skip_altgive:
             xas_in = [n for n in xas_in if n not in cut_cas]
 
         if verbose:
