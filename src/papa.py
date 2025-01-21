@@ -73,6 +73,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytics = global_analytics | analytics.avg_inode_sentiment(xaif)
     global_analytics = global_analytics | analytics.arg_struct_sentiment(xaif)
     global_analytics = global_analytics | analytics.avgTenseScores(xaif)
+    global_analytics = global_analytics | analytics.ya_count(xaif)
     # global_analytics = global_analytics | analytics.arg_struct_ner_types(xaif)
     
     # ! This shouldn't be have chron=False in general, but it'll keep the measure consistent between the Forecast subgraphs and full graph

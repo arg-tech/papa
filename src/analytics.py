@@ -1906,8 +1906,14 @@ def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
         conflict_tuples = conflict_tuples + [([i for i in all_nodes if i in all_nodes[ca]['ein'] and all_nodes[i]['type'] == 'I'][0], 
                                             ca,
                                             [i for i in all_nodes if i in all_nodes[ca]['eout'] and all_nodes[i]['type'] == 'I'][0])]
+        if verbose:
+            print("Conflict tuples:")
+            for t in conflict_tuples:
+                print(f"[I {t[0]}]-->(CA {t[1]})-->[I {t[2]}]")
 
     for tup in conflict_tuples:
+        if verbose:
+            print(f"Checking for conflict [I {tup[0]}]-->(CA {tup[1]})-->[I {tup[2]}]")
         i_ca_premise_loc = all_nodes[tup[0]]['introby'][0]
         
         # Look for supports and attacks incoming to the attacking prop
