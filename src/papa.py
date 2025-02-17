@@ -1,6 +1,8 @@
 import json
-from . import xaif_toolbox as ova3
-from . import analytics
+# from . import xaif_toolbox as ova3
+# from . import analytics
+import xaif_toolbox as ova3
+import analytics
 import statistics
 import sys
 import os
