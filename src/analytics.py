@@ -1116,6 +1116,7 @@ def ca_rebut(xaif, speaker=False, verbose=False, skip_altgive=True):
 # Breadth and depth #
 #####################
 
+# 'Initial' in sense of status as a premise with no further premises itself, not chronology
 def initial_arg(xa_id, seen_xas, all_nodes, speaker=False, rel_type='RA', skip_altgive=True, verbose=False):
     seen_xas = seen_xas + [xa_id]
     
@@ -1328,6 +1329,7 @@ def max_ca_chain(xaif, speaker=False, verbose=False, skip_altgive=True):
             return {'max_ca_chain': 0}
 
 
+# 
 def arg_breadths(xaif, speaker=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
