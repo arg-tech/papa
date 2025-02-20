@@ -321,12 +321,11 @@ def add_speakers(all_nodes, verbose=False):
                 if all_nodes[e_out]['type'] == 'YA':
                     ya = e_out
                     for ya_out in all_nodes[ya]['eout']:
-                        if all_nodes[ya_out]['type'] == 'I' and spkr != '':
-                            # record node-wise
-                            all_nodes[ya_out]['saidby'].append(spkr)
+                        if all_nodes[ya_out]['type'] == 'I':
+                            if spkr != '':
+                                all_nodes[ya_out]['saidby'].append(spkr)
+                                said[spkr].append(all_nodes[ya_out]['nodeID'])
 
-                            # record speaker-wise
-                            said[spkr].append(all_nodes[ya_out]['nodeID'])
                             all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
         # Reported speech: I-node should be attributed to the quoting speaker
                             
