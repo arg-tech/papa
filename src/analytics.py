@@ -1777,7 +1777,7 @@ def arg_intros(xaif, verbose=False, add_to_node=False):
 
 
 # No. of inferences which have as direct earlier component a proposition originating with another speaker
-def direct_args_from_others(xaif, debug=False):
+def direct_args_from_others(xaif, debug=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1785,7 +1785,10 @@ def direct_args_from_others(xaif, debug=False):
     
     other_arg_count = {}
     ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
-
+    if add_to_node:
+        for ra in ra_nodes:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
+            current_node['direct_arg_from_other'] = False
 
     for spkr in said:
         other_arg_count[spkr] = {'direct_args_from_others': 0}
@@ -1839,13 +1842,16 @@ def direct_args_from_others(xaif, debug=False):
             # Set of speakers for the other nodes contains more speakers than the RA-creator
             if set(loc_speakers) != {spkr}:
                 other_arg_count[spkr]['direct_args_from_others'] += 1
+                if add_to_node:
+                    current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
+                    current_node['direct_arg_from_other'] = True
     
     return other_arg_count
 
 
 # Number of arguments by speaker where one (or more) of the propositions attributed to the arguing speaker 
 # is a rephrase of a proposition introduced by another speaker
-def indirect_args_from_others(xaif, debug=False):
+def indirect_args_from_others(xaif, debug=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1853,6 +1859,10 @@ def indirect_args_from_others(xaif, debug=False):
     
     other_arg_count = {}
     ra_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'RA']
+    if add_to_node:
+        for ra in ra_nodes:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
+            current_node['indirect_arg_from_other'] = False
 
     # Get all props associated with speaker that are connected to the RA
     for spkr in said:
@@ -1897,6 +1907,9 @@ def indirect_args_from_others(xaif, debug=False):
                     orig_prop = [n for n in all_nodes if all_nodes[n]['type'] == 'I' and n in all_nodes[ma]['eout']][0]
                     if i_node_introducer(orig_prop, all_nodes) != spkr:
                         other_arg_count[spkr]['indirect_args_from_others'] += 1
+                        if add_to_node:
+                            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
+                            current_node['indirect_arg_from_other'] = True
                         other_found = True
                     break
                 if other_found:
@@ -1906,7 +1919,7 @@ def indirect_args_from_others(xaif, debug=False):
 
 
 # Count of conflicts each speaker creates with content from another speaker
-def dir_conflict_others(xaif, debug=False):
+def dir_conflict_others(xaif, debug=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1914,6 +1927,10 @@ def dir_conflict_others(xaif, debug=False):
     
     other_conflict_count = {}
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    if add_to_node:
+        for ca in ca_nodes:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+            current_node['direct_conflict_with_other'] = False
 
     for spkr in said:
         if debug:
@@ -1931,11 +1948,14 @@ def dir_conflict_others(xaif, debug=False):
 
             if target_orig_spkr != spkr:
                 other_conflict_count[spkr]['direct_other_conflicts'] += 1
+                if add_to_node:
+                    current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+                    current_node['direct_conflict_with_other'] = True
     
     return other_conflict_count
 
 # Count of conflicts
-def indir_conflict_others(xaif, debug=False):
+def indir_conflict_others(xaif, debug=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1943,6 +1963,10 @@ def indir_conflict_others(xaif, debug=False):
     
     other_conflict_count = {}
     ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+    if add_to_node:
+        for ca in ca_nodes:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+            current_node['indirect_conflict_with_other'] = False
 
     for spkr in said:
         other_conflict_count[spkr] = {'indirect_other_conflicts': 0}
@@ -1976,6 +2000,9 @@ def indir_conflict_others(xaif, debug=False):
                     if i_node_introducer(orig, all_nodes) != spkr:
                         other_conflict_count[spkr]['indirect_other_conflicts'] += 1
                         other_found = True
+                        if add_to_node:
+                            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+                            current_node['indirect_conflict_with_other'] = True
                         break
                 
                 # Don't need to check anything else for this CA, skip rest of loop
@@ -2001,6 +2028,9 @@ def indir_conflict_others(xaif, debug=False):
                         if (all_nodes[arg_loc]['chron'] < all_nodes[target_loc]['chron']) and (all_nodes[arg_loc]['speaker'][0] != spkr):
                             other_conflict_count[spkr]['indirect_other_conflicts'] += 1
                             other_found = True
+                            if add_to_node:
+                                current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+                                current_node['indirect_conflict_with_other'] = True
                             # no need to check other I-nodes
                             break
                     # no need to check any other RAs for the target prop
@@ -2019,6 +2049,9 @@ def indir_conflict_others(xaif, debug=False):
                         if (all_nodes[arg_loc]['chron'] < all_nodes[target_loc]['chron']) and (all_nodes[arg_loc]['speaker'][0] != spkr):
                             other_conflict_count[spkr]['indirect_other_conflicts'] += 1
                             other_found = True
+                            if add_to_node:
+                                current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+                                current_node['indirect_conflict_with_other'] = True
                             # no need to check other I-nodes
                             break
                     # no need to check any other RAs for the target prop
@@ -2030,11 +2063,16 @@ def indir_conflict_others(xaif, debug=False):
 
 # For each speaker, their action connected to a question
 # YA anchored in the L-node and (if any) in the TA connecting to the question.
-def follow_questions(xaif, debug=False):
+def follow_questions(xaif, debug=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
         all_nodes, said = ova2.xaif_preanalytic_info_collection(xaif)
+
+    if add_to_node:
+        all_yas = [n for n in xaif['AIF']['nodes'] if n['type'] == 'YA']
+        for n in all_yas:
+            n['follows_question'] = False
 
     # l_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'L']
     question_l_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'L' 
@@ -2069,6 +2107,10 @@ def follow_questions(xaif, debug=False):
         for ya in yas:
             spkr = all_nodes[ya]['speaker'][0] # ASSUMPTION
             ya_text = all_nodes[ya]['text']
+            if add_to_node:
+                current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ya][0]
+                current_node['follows_question'] = True
+
             # Check keys
             if ya_text not in following_questions[spkr].keys():
                 following_questions[spkr][ya_text] = 1
@@ -2080,7 +2122,7 @@ def follow_questions(xaif, debug=False):
 
 # Count of initial nodes of conflicts which themselves receive support and/or further attack.
 # Note that if chron is set to false, it will count Alt-Giving as attacks on attacks unless set to skip altgive
-def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
+def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, _ = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -2091,6 +2133,13 @@ def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
     # Create tuples with IDs of i-nodes and ca node in conflicts
     conflict_tuples = []
     ca_nodes = [c for c in all_nodes if all_nodes[c]['type'] == 'CA']
+
+    if add_to_node:
+        for ca in ca_nodes:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+            current_node['source_supported'] = False
+            current_node['source_attacked'] = False
+
     if skip_altgive:
         alt_gives = [n for n in all_nodes 
                         if all_nodes[n]['type'] == 'YA' 
@@ -2111,6 +2160,9 @@ def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
             print(f"[I {t[0]}]-->(CA {t[1]})-->[I {t[2]}]")
 
     for tup in conflict_tuples:
+        if add_to_node:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == tup[1]][0]
+
         if verbose:
             print(f"Checking for conflict [I {tup[0]}]-->(CA {tup[1]})-->[I {tup[2]}]")
         i_ca_premise_loc = all_nodes[tup[0]]['introby'][0]
@@ -2131,10 +2183,14 @@ def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
                         # Condition met due to missing info
                         print("No chrono ordering info recorded: cannot account for ordering in attacks/supports on attacker prop.")
                     conflict_support['ca_source_supported'] += 1
-                # if later than the attacking proposition, it's relevant
+                    if add_to_node:
+                        current_node['source_supported'] = True
 
+                # if later than the attacking proposition, it's relevant
                 elif all_nodes[supp_premise_loc]['chron'] > all_nodes[i_ca_premise_loc]['chron']:
                     conflict_support['ca_source_supported'] += 1
+                    if add_to_node:
+                        current_node['source_supported'] = True
     
         for a in attack:
             attk_premises = [n for n in all_nodes[a]['ein'] if all_nodes[n]['type'] == 'I']
@@ -2148,10 +2204,14 @@ def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
                         # Condition met due to missing info
                         print("No chrono info recorded: cannot account for ordering in attacks/supports on attacker prop.")
                     conflict_support['ca_source_attacked'] += 1
+                    if add_to_node:
+                        current_node['source_attacked'] = True
 
                 # if later than the attacking proposition, it's relevant
                 elif all_nodes[attk_premise_loc]['chron'] > all_nodes[i_ca_premise_loc]['chron']:
                     conflict_support['ca_source_attacked'] += 1
+                    if add_to_node:
+                        current_node['source_attacked'] = True
     
 
     return conflict_support
@@ -2159,7 +2219,7 @@ def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True):
 
 
 
-def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True):
+def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -2173,6 +2233,14 @@ def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True):
     # Create tuples with IDs of i-nodes and ca node in conflicts
     conflict_tuples = []
     ca_nodes = [c for c in all_nodes if all_nodes[c]['type'] == 'CA']
+    if add_to_node:
+        ra_nodes = [c for c in all_nodes if all_nodes[c]['type'] == 'RA']
+        for ra in ra_nodes:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
+            current_node['supporting_attack_by_other'] = False
+            # current_node['source_attacked_by_other'] = False
+
+
     if skip_altgive:
         alt_gives = [n for n in all_nodes 
                         if all_nodes[n]['type'] == 'YA' 
@@ -2204,6 +2272,8 @@ def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True):
         support = [n for n in all_nodes if all_nodes[n]['type'] == 'RA' and n in all_nodes[tup[0]]['ein']]
 
         for s in support:
+            if add_to_node:
+                current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == support][0]
             supp_spkr = all_nodes[s]['speaker'][0]
 
             # Support is from a speaker already involved in the conflict, irrelevant: move on to next support
@@ -2224,6 +2294,8 @@ def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True):
                     # Record that speaker as supporting an attack
                     if supp_premise_spkr != i_ca_premise_spkr:
                         conflict_support[supp_premise_spkr] += 1
+                        if add_to_node:
+                            current_node['supporting_attack_by_other'] = True
     
     return conflict_support
             
@@ -2396,7 +2468,7 @@ def face_protector(xaif, debug=False):
 
 
 # Report the YAs used by speakers to introduce the premise of a CA relation against another speaker's content
-def conflict_illocs(xaif, debug=False):
+def conflict_illocs(xaif, debug=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -2406,6 +2478,12 @@ def conflict_illocs(xaif, debug=False):
     for spkr in said:
         other_conflict_yas[spkr] = {}
     
+    if add_to_node:
+        ca_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'CA']
+        for ca in ca_nodes:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ca][0]
+            current_node['move_against_other'] = {}
+
     # Get conflicts
     conflicts = []
     for ca in [c for c in all_nodes if all_nodes[c]['type'] == 'CA']:
@@ -2414,6 +2492,7 @@ def conflict_illocs(xaif, debug=False):
             'ca_id': ca,
             'target_i_id': [i for i in all_nodes if i in all_nodes[ca]['eout'] and all_nodes[i]['type'] == 'I'][0]
         }]
+
 
     # Get cross-speaker conflicts only
     x_spkr_ca = []
@@ -2433,6 +2512,8 @@ def conflict_illocs(xaif, debug=False):
 
     # ! Only one YA assumed/checked, this should be tighter
     for con in x_spkr_ca:
+        if add_to_node:
+            current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == con['ca_id']][0]
         ya_node_in = [all_nodes[n]['text'] for n in all_nodes 
                       if all_nodes[n]['type'] == 'YA' 
                       and con['premise_i_id'] in all_nodes[n]['eout']
@@ -2442,7 +2523,13 @@ def conflict_illocs(xaif, debug=False):
             other_conflict_yas[con['premise_spkr']][ya_node_in] = 1
         else:
             other_conflict_yas[con['premise_spkr']][ya_node_in] += 1
-    
+        if add_to_node:
+            if ya_node_in not in current_node['move_against_other'].keys():
+                current_node['move_against_other'][ya_node_in] = 1
+            else:
+                current_node['move_against_other'][ya_node_in] += 1
+
+
     return other_conflict_yas
 
 
