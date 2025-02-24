@@ -32,26 +32,39 @@ def i_node_introducer(i_node, all_nodes):
 
 
 # Given the ID of an argument scheme node, return the ID of the L-node 
-def arg_rel_lnode(rel_node, all_nodes):
+def arg_rel_lnode(rel_node, all_nodes, verbose=False):
     ya_node_in = [n for n in all_nodes if all_nodes[n]['type'] == 'YA' and rel_node in all_nodes[n]['eout']][0]
     # Usually anchored in TA: find descending L-node
     try:
         ta_node_in = [n for n in all_nodes if all_nodes[n]['type'] == 'TA' and ya_node_in in all_nodes[n]['eout']][0]
         l_nodes_out = [n for n in all_nodes if all_nodes[n]['type'] == 'L' and ta_node_in in all_nodes[n]['ein']]
+        if verbose:
+            print(f"Anchored in TA {ta_node_in}, which has outgoing L-nodes ", *l_nodes_out)
     # If not anchored in TA, check for an L-node directly
     except IndexError:
         l_nodes_out = [n for n in all_nodes if all_nodes[n]['type'] == 'L' and ya_node_in in all_nodes[n]['eout']]
 
     if len(l_nodes_out) == 1:
+        if verbose:
+            print("TA has a single outgoing L-node: returning it")
         return l_nodes_out[0]
     else:
         # if multiple outgoing, find the one with an I-node connected to the relation
+        if verbose:
+            print("TA has multple outoing L-nodes")
+        
         for l in l_nodes_out:
-            ya_node_out = [n for n in all_nodes if all_nodes[n]['type'] == 'YA' and l in all_nodes[n]['eout']]
+            if verbose:
+                print(f"Checking L-node ", l)
+            ya_node_out = [n for n in all_nodes if all_nodes[n]['type'] == 'YA' and l in all_nodes[n]['ein']]
+            if verbose:
+                print(f"\t{l} has outgoing YA(s) ", ya_node_out)
             for ya in ya_node_out:
                 connected_i_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'I' and ya in all_nodes[n]['ein'] 
                                     and (rel_node in all_nodes[n]['ein'] or rel_node in all_nodes[n]['eout'])]
                 # connected_i = [n for n in all_nodes if l in all_nodes[n]['']]
+                if verbose:
+                    print(f"\tYA-node has connected I-nodes ", connected_i_nodes)
                 if len(connected_i_nodes) != 0:
                     return l
 
@@ -1680,6 +1693,10 @@ def arg_intros(xaif, verbose=False, add_to_node=False):
         for relation_id_list, relation_txt in zip([spkr_ra_all, spkr_ca_all, spkr_ma_all], ['RA', 'CA', 'MA']):
             for relation_id in relation_id_list:
                 l_node = arg_rel_lnode(relation_id, all_nodes)
+                if verbose:
+                    print(f"Checking for {relation_txt} relation {relation_id}")
+                    print(f"Associated l-node found to be: {l_node}")
+
 
                 # Check if edge-case anchored directly by L
                 direct_anchor = [ya for ya in all_nodes[l_node]['eout'] 
@@ -1719,8 +1736,7 @@ def arg_intros(xaif, verbose=False, add_to_node=False):
                         and l_node in all_nodes[n]['ein']]
                     
                     if verbose:
-                        print(f"Checking for {relation_txt} relation {relation_id}")
-                        print(f"Associated l-node found to be: {l_node}")
+                        # print(f"Associated l-node found to be: {l_node}")
                         print(f"\t{all_nodes[l_node]['text']}")
                         print('\t', *ya_type)
 
@@ -1919,7 +1935,7 @@ def indirect_args_from_others(xaif, debug=False, add_to_node=False):
 
 
 # Count of conflicts each speaker creates with content from another speaker
-def dir_conflict_others(xaif, debug=False, add_to_node=False):
+def dir_conflict_others(xaif, verbose=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1933,17 +1949,19 @@ def dir_conflict_others(xaif, debug=False, add_to_node=False):
             current_node['direct_conflict_with_other'] = False
 
     for spkr in said:
-        if debug:
+        if verbose:
             print(f"Checking conflicts created by {spkr}")
         other_conflict_count[spkr] = {'direct_other_conflicts': 0}
         spkr_ca_all = [n for n in ca_nodes if spkr in all_nodes[n]['speaker']]
         
         for ca in spkr_ca_all:
+            if verbose:
+                print(f"CA {ca} targets node ", end='')
             # Get node targeted by the CA
             ca_target = [n for n in all_nodes if n in all_nodes[ca]['eout']][0]
             target_orig_spkr = all_nodes[all_nodes[ca_target]['introby'][0]]['speaker'][0]
-            if debug:
-                    print(f"CA {ca} targets node {ca_target}")
+            if verbose:
+                    print(ca_target)
                     print(f"\t{ca_target}, {target_orig_spkr}: {all_nodes[ca_target]['text']}")
 
             if target_orig_spkr != spkr:
@@ -2063,7 +2081,7 @@ def indir_conflict_others(xaif, debug=False, add_to_node=False):
 
 # For each speaker, their action connected to a question
 # YA anchored in the L-node and (if any) in the TA connecting to the question.
-def follow_questions(xaif, debug=False, add_to_node=False):
+def follow_questions(xaif, verbose=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -2091,12 +2109,15 @@ def follow_questions(xaif, debug=False, add_to_node=False):
         l_from_q = []
 
         # Get YAs anchored in a from-question TA and L-nodes descending from a from-question TA
+        # Default to empty
+        yas = []
+        l_from_q = []
         for ta in ta_from_q:
             # Get any YA anchored by the TA
-            yas = [n for n in all_nodes[ta]['eout'] if all_nodes[n]['type'] == 'YA']
+            yas += [n for n in all_nodes[ta]['eout'] if all_nodes[n]['type'] == 'YA']
 
             # Get descending L-nodes
-            l_from_q = l_from_q + [n for n in all_nodes[ta]['eout'] if all_nodes[n]['type'] == 'L']
+            l_from_q += [n for n in all_nodes[ta]['eout'] if all_nodes[n]['type'] == 'L']
 
         
         # Get any YA anchored by the collected L-nodes
@@ -2153,7 +2174,7 @@ def conflict_support_attack(xaif, verbose=False, chron=True, skip_altgive=True, 
     for ca in ca_nodes:
         conflict_tuples = conflict_tuples + [([i for i in all_nodes if i in all_nodes[ca]['ein'] and all_nodes[i]['type'] == 'I'][0], 
                                             ca,
-                                            [i for i in all_nodes if i in all_nodes[ca]['eout'] and all_nodes[i]['type'] == 'I'][0])]
+                                            [i for i in all_nodes if i in all_nodes[ca]['eout']][0])]
     if verbose:
         print("Conflict tuples:")
         for t in conflict_tuples:
@@ -2253,7 +2274,7 @@ def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True, add_to_no
     for ca in ca_nodes:
         conflict_tuples = conflict_tuples + [([i for i in all_nodes if i in all_nodes[ca]['ein'] and all_nodes[i]['type'] == 'I'][0], 
                                             ca,
-                                            [i for i in all_nodes if i in all_nodes[ca]['eout'] and all_nodes[i]['type'] == 'I'][0])]
+                                            [i for i in all_nodes if i in all_nodes[ca]['eout']][0])]
 
     # Keep only those where the propositions involved originate with different speakers
     # (i.e. keep only cross-speaker conflicts)
@@ -2272,8 +2293,10 @@ def interspkr_conflict_support(xaif, verbose=False, skip_altgive=True, add_to_no
         support = [n for n in all_nodes if all_nodes[n]['type'] == 'RA' and n in all_nodes[tup[0]]['ein']]
 
         for s in support:
+            if verbose:
+                print(f'Found support RA {s} for attacking prop {tup[0]}')
             if add_to_node:
-                current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == support][0]
+                current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == s][0]
             supp_spkr = all_nodes[s]['speaker'][0]
 
             # Support is from a speaker already involved in the conflict, irrelevant: move on to next support
@@ -2468,7 +2491,7 @@ def face_protector(xaif, debug=False):
 
 
 # Report the YAs used by speakers to introduce the premise of a CA relation against another speaker's content
-def conflict_illocs(xaif, debug=False, add_to_node=False):
+def conflict_illocs(xaif, verbose=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -2487,10 +2510,12 @@ def conflict_illocs(xaif, debug=False, add_to_node=False):
     # Get conflicts
     conflicts = []
     for ca in [c for c in all_nodes if all_nodes[c]['type'] == 'CA']:
+        if verbose:
+            print("Getting conflict ", ca)
         conflicts = conflicts + [{
             'premise_i_id': [i for i in all_nodes if i in all_nodes[ca]['ein'] and all_nodes[i]['type'] == 'I'][0],
             'ca_id': ca,
-            'target_i_id': [i for i in all_nodes if i in all_nodes[ca]['eout'] and all_nodes[i]['type'] == 'I'][0]
+            'target_i_id': [i for i in all_nodes if i in all_nodes[ca]['eout']][0]
         }]
 
 

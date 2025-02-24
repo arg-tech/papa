@@ -289,6 +289,15 @@ def add_edge_info(xaif, all_nodes):
     return all_nodes
 
 
+def path_to_start(l_node, all_nodes):
+    # Nodes with edges to L-node other than TA-nodes
+    prev_nodes = [n for n in all_nodes[l_node]['ein'] if all_nodes[n]['type'] != 'TA']
+    for n in prev_nodes:
+        if all_nodes[n]['type'] not in ['I', 'RA', 'CA', 'MA']:
+                return path_to_start(n, all_nodes)
+    # if prev list is empty, this was start: return it
+    return l_node
+
 
 # also adds locution associations to i-nodes
 def add_speakers(all_nodes, verbose=False):
@@ -333,7 +342,12 @@ def add_speakers(all_nodes, verbose=False):
         else:
             # Get quoting speaker
             quoter = reporting_speaker(n, all_nodes)
+            source = path_to_start(n, all_nodes)
+            # Add an introby to self
 
+            all_nodes[n]['introby'].append(source)
+
+            # Add to I-node if directly connected
             for e_out in all_nodes[n]['eout']:
                 if all_nodes[e_out]['type'] == 'YA':
                     ya = e_out
@@ -342,7 +356,8 @@ def add_speakers(all_nodes, verbose=False):
                             # record node-wise only
                             all_nodes[ya_out]['saidby'].append(quoter)
                             
-                            all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
+                            all_nodes[ya_out]['introby'].append(source)
+                            # all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
 
     # Meeds cleaning/merging with following chunk, but leaving as is for now
     # Get TA speakers
@@ -499,7 +514,7 @@ def add_loc_order(xaif, all_nodes, verbose=False):
     return all_nodes
 
 
-# Add nodeID of earliest locution which anchors each proposition
+# Add nodeID of earliest locution which anchors each proposition (and reported speech)
 def add_prop_earliest_intro(all_nodes):
     for n in all_nodes:
         if n['type'] == 'I':
