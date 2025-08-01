@@ -1,0 +1,9 @@
+services:
+  # According to the docs, changing the service name will cause the deployment
+  # to fail. (https://wiki.arg.tech/books/infrastructure/page/2-deploy-to-staging)
+  papa:
+    build: .
+    container_name: papa
+    restart: unless-stopped
+    ports:
+      - "15015:8000"
