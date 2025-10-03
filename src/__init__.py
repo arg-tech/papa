@@ -12,13 +12,14 @@ class RequestBody(BaseModel):
     xaif: dict
 
 
-app = FastAPI()
+app = FastAPI(title="papa", summary="Papa: Amazing Python Analytics")
 
 
 @app.post("/api/all_analytics")
 # Call without async so that fastapi does the work on a threadpool as
 # all_analytics is cpu-bound and we don't want to block the current thread.
-def all_analytics(body: RequestBody | dict):
+def all_analytics(body: RequestBody | dict) -> dict:
+    """Wrapper around papa's all_analytics function."""
     try:
         if isinstance(body, RequestBody):
             return papa.all_analytics(
