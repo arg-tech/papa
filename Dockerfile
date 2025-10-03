@@ -1,6 +1,6 @@
 # With inspiration from uv's example multistage dockerfile.
 
-FROM python:3.13-slim-bookworm AS builder
+FROM python:3.13-slim-trixie AS builder
 WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /uvx /bin/
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
       #&& uv run -m nltk.downloader all -d /app/.venv/nltk_data
 
 
-FROM python:3.13-slim-bookworm AS runtime
+FROM python:3.13-slim-trixie AS runtime
 
 COPY --from=builder /app /app
 
