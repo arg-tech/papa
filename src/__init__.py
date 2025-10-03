@@ -1,13 +1,13 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from . import papa
 
 
 class RequestBody(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
     xaif: dict
-    node_level: bool | None = None
-    speaker: bool | None = None
-    forecast: bool | None = None
 
 
 app = FastAPI()
