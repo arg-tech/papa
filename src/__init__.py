@@ -17,9 +17,9 @@ app = FastAPI()
 # Call without async so that fastapi does the work on a threadpool as
 # all_analytics is cpu-bound and we don't want to block the current thread.
 def all_analytics(body: RequestBody | dict):
+    kwargs = {}
     if isinstance(body, RequestBody):
         xaif = body.xaif
-        kwargs = {}
         for name, value in body:
             if name == "xaif":
                 continue
@@ -28,4 +28,4 @@ def all_analytics(body: RequestBody | dict):
     else:
         xaif = body
 
-    return papa.all_analytics(xaif)
+    return papa.all_analytics(xaif, **kwargs)
