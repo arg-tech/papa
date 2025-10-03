@@ -3,15 +3,8 @@ from pydantic import BaseModel
 from . import papa
 
 
-# TODO: Flesh this out?
-class Xaif(BaseModel):
-    AIF: dict
-    text: str
-    OVA: dict | None = None
-
-
 class RequestBody(BaseModel):
-    xaif: Xaif
+    xaif: dict
     node_level: bool | None = None
     speaker: bool | None = None
     forecast: bool | None = None
@@ -23,9 +16,9 @@ app = FastAPI()
 @app.post("/api/all_analytics")
 # Call without async so that fastapi does the work on a threadpool as
 # all_analytics is cpu-bound and we don't want to block the current thread.
-def all_analytics(body: RequestBody | Xaif):
+def all_analytics(body: RequestBody | dict):
     if isinstance(body, RequestBody):
-        xaif = dict(body.xaif)
+        xaif = body.xaif
         kwargs = {}
         for name, value in body:
             if name == "xaif":
@@ -33,6 +26,6 @@ def all_analytics(body: RequestBody | Xaif):
 
             kwargs[name] = value if value is not None else False
     else:
-        xaif = dict(body)
+        xaif = body
 
     return papa.all_analytics(xaif)
