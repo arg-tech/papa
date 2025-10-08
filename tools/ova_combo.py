@@ -133,7 +133,8 @@ def ova2_to_ova3(xaif_in):
 
 
 # Combine all json files in a directory, assuming they're OVA3 files
-def combine_ova3(dir_in, file_out, verbose=False):
+# Optional argument to identify an IMC file, which will be standard XAIF
+def combine_ova3(dir_in, file_out, imc_file="", verbose=False):
     json_list = glob(f"{dir_in}/*.json")
     # json_list = glob(f"{dir_in}/*_ova3.json")
     
@@ -164,8 +165,14 @@ def combine_ova3(dir_in, file_out, verbose=False):
     }
     
 
+    i_nodes = []
+    i_node_texts = []
+
     # Assemble the AIF (atemporal)
     for j in json_list:
+        if verbose:
+            print(f"--- {os.path.basename(j)} ---")
+
         with open(j, 'r') as file:
             xaif_in = json.loads(file.read())
 
@@ -173,8 +180,54 @@ def combine_ova3(dir_in, file_out, verbose=False):
         if 'AIF' not in xaif_in:
             xaif_in = ova2_to_ova3(xaif_in)
 
-        # Copy across core AIF
+
+        # Avoid duplicate propositions under different IDs
+        keeper_aif_nodes = []
+        keeper_ova_nodes = []
+    
         for n in xaif_in['AIF']['nodes']:
+            # Keep if it's not an I-node: shouldn't be collapsed
+            if n['type'] != 'I':
+                if verbose:
+                    print(f"Keeping {n['type']}-node {n['nodeID']}")
+                keeper_aif_nodes.append(n)
+                keeper_ova_nodes.append(n)
+            
+            else:
+                # Keep it if it's a new I-node, and make a note of it
+                if n['text'] not in i_node_texts:
+                    if verbose:
+                        print(f"Keeping new {n['type']}-node {n['nodeID']}")
+                    i_nodes.append(n)
+                    i_node_texts.append(n['text'])
+                    keeper_aif_nodes.append(n)
+                    keeper_ova_nodes.append(n)
+                
+                # An I-node with seen text: don't keep this copy, and replace its ID
+                # This can be done in-place in the edges
+                else:
+                    existing_i = [i for i in i_nodes if i['text'] == n['text']][0]
+                    if verbose:
+                        print(f"!! {n['type']}-node {n['nodeID']} already present under ID {existing_i['nodeID']}")
+                    
+                    # Replace in edges
+                    for e in xaif_in['AIF']['edges']:
+                        if e['fromID'] == n['nodeID']:
+                            e['fromID'] = existing_i['nodeID']
+                        if e['toID'] == n['nodeID']:
+                            e['toID'] = existing_i['nodeID']
+                    
+                    for e in xaif_in['OVA']['edges']:
+                        if e['fromID'] == n['nodeID']:
+                            e['fromID'] = existing_i['nodeID']
+                        if e['toID'] == n['nodeID']:
+                            e['toID'] = existing_i['nodeID']
+
+        
+
+        # Copy across core AIF
+        # for n in xaif_in['AIF']['nodes']:
+        for n in keeper_aif_nodes:
             if n not in combined_xaif['AIF']['nodes']:
                 combined_xaif['AIF']['nodes'].append(n)
         
@@ -187,7 +240,8 @@ def combine_ova3(dir_in, file_out, verbose=False):
                 combined_xaif['AIF']['locutions'].append(l)
 
         # Copy across OVA
-        for n in xaif_in['OVA']['nodes']:
+        # for n in xaif_in['OVA']['nodes']:
+        for n in keeper_ova_nodes:
             if n not in combined_xaif['OVA']['nodes']:
                 combined_xaif['OVA']['nodes'].append(n)
         
@@ -230,6 +284,11 @@ def combine_ova3(dir_in, file_out, verbose=False):
         # if verbose:
             # print(f'\tTEXT {i}:', file_txts[s[1]])
     
+
+    # Add IMC
+    if imc_file != "":
+        if verbose:
+            print("Adding IMC content")
 
     # Write the final result
     if verbose:
