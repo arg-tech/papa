@@ -2879,9 +2879,9 @@ def avgTenseScores(xaif, flat=True):
             tense_count['graph_tenses']['present'] += n['present']
             tense_count['graph_tenses']['base'] += n['base']
         
-        tense_count['graph_tenses']['past'] = tense_count['graph_tenses']['past']/len(node_scores['node_tenses'])
-        tense_count['graph_tenses']['present'] = tense_count['graph_tenses']['present']/len(node_scores['node_tenses'])
-        tense_count['graph_tenses']['base'] = tense_count['graph_tenses']['base']/len(node_scores['node_tenses'])
+        tense_count['graph_tenses']['past'] = tense_count['graph_tenses']['past']/len(node_scores['node_tenses']) if len(node_scores['node_tenses']) != 0 else 0.0
+        tense_count['graph_tenses']['present'] = tense_count['graph_tenses']['present']/len(node_scores['node_tenses']) if len(node_scores['node_tenses']) != 0 else 0.0
+        tense_count['graph_tenses']['base'] = tense_count['graph_tenses']['base']/len(node_scores['node_tenses']) if len(node_scores['node_tenses']) != 0 else 0.0
 
     else:
         tense_count = {'graph_tenses_past': 0, 'graph_tenses_present': 0, 'graph_tenses_base': 0}
@@ -2890,9 +2890,9 @@ def avgTenseScores(xaif, flat=True):
             tense_count['graph_tenses_present'] += n['present']
             tense_count['graph_tenses_base'] += n['base']
         
-        tense_count['graph_tenses_past'] = tense_count['graph_tenses_past']/len(node_scores['node_tenses'])
-        tense_count['graph_tenses_present'] = tense_count['graph_tenses_present']/len(node_scores['node_tenses'])
-        tense_count['graph_tenses_base'] = tense_count['graph_tenses_base']/len(node_scores['node_tenses'])
+        tense_count['graph_tenses_past'] = tense_count['graph_tenses_past']/len(node_scores['node_tenses']) if len(node_scores['node_tenses']) != 0 else 0.0
+        tense_count['graph_tenses_present'] = tense_count['graph_tenses_present']/len(node_scores['node_tenses']) if len(node_scores['node_tenses']) != 0 else 0.0
+        tense_count['graph_tenses_base'] = tense_count['graph_tenses_base']/len(node_scores['node_tenses']) if len(node_scores['node_tenses']) != 0 else 0.0
 
 
     return tense_count
@@ -2946,17 +2946,18 @@ def avg_inode_sentiment(xaif, flat=True):
         comp += n['sentiment']['compound']
 
 
+
     if not flat:
         avg_sentiment = {'avg_node_sentiment':{}}
-        avg_sentiment['avg_node_sentiment']['neg'] = round(neg/len(node_sentiment), 3)
-        avg_sentiment['avg_node_sentiment']['neu'] = round(neu/len(node_sentiment), 3)
-        avg_sentiment['avg_node_sentiment']['pos'] = round(pos/len(node_sentiment), 3)
-        avg_sentiment['avg_node_sentiment']['compound'] = round(comp/len(node_sentiment), 4)
+        avg_sentiment['avg_node_sentiment']['neg'] = round(neg/len(node_sentiment), 3) if len(node_sentiment) != 0 else 0.0
+        avg_sentiment['avg_node_sentiment']['neu'] = round(neu/len(node_sentiment), 3) if len(node_sentiment) != 0 else 0.0
+        avg_sentiment['avg_node_sentiment']['pos'] = round(pos/len(node_sentiment), 3) if len(node_sentiment) != 0 else 0.0
+        avg_sentiment['avg_node_sentiment']['compound'] = round(comp/len(node_sentiment), 4) if len(node_sentiment) != 0 else 0.0
     else:
-        avg_sentiment['avg_node_sentiment_neg'] = round(neg/len(node_sentiment), 3)
-        avg_sentiment['avg_node_sentiment_neu'] = round(neu/len(node_sentiment), 3)
-        avg_sentiment['avg_node_sentiment_pos'] = round(pos/len(node_sentiment), 3)
-        avg_sentiment['avg_node_sentiment_compound'] = round(comp/len(node_sentiment), 4)
+        avg_sentiment['avg_node_sentiment_neg'] = round(neg/len(node_sentiment), 3) if len(node_sentiment) != 0 else 0.0
+        avg_sentiment['avg_node_sentiment_neu'] = round(neu/len(node_sentiment), 3) if len(node_sentiment) != 0 else 0.0
+        avg_sentiment['avg_node_sentiment_pos'] = round(pos/len(node_sentiment), 3) if len(node_sentiment) != 0 else 0.0
+        avg_sentiment['avg_node_sentiment_compound'] = round(comp/len(node_sentiment), 4) if len(node_sentiment) != 0 else 0.0
 
     return avg_sentiment
 
