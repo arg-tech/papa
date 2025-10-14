@@ -636,7 +636,7 @@ def prem_concl_ratio(xaif, speaker=False, verbose=False):
 # Order and structure # 
 #######################
 
-def concl_first_perc(xaif, speaker=False, add_to_node=False):
+def concl_first_perc(xaif, speaker=False, add_to_node=False, verbose=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -648,6 +648,9 @@ def concl_first_perc(xaif, speaker=False, add_to_node=False):
     
     if speaker:
         for spkr in said:
+            if verbose:
+                print(f"--- Speaker '{spkr}' ---")
+
             spkr_ra_all = [n for n in ra_nodes if spkr in all_nodes[n]['speaker']]
             ra_total = len(spkr_ra_all)
             
@@ -660,6 +663,8 @@ def concl_first_perc(xaif, speaker=False, add_to_node=False):
                 continue
 
             for ra in spkr_ra_all:
+                if verbose:
+                    print(f"Checking RA {ra}")
                 if add_to_node:
                     current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
                     current_node['concl_first'] = False
@@ -669,17 +674,37 @@ def concl_first_perc(xaif, speaker=False, add_to_node=False):
 
                     # Found a YA with edge to the RA
                     if all_nodes[ra_incoming_node]['type'] == 'YA':
+
+                        if verbose:
+                            print(f"{all_nodes[ra_incoming_node]['text']} YA {ra_incoming_node} has edge toward RA {ra}")
+                            print(f"Looping through nodes with edges to {ra_incoming_node} {all_nodes[ra_incoming_node]['text']}")
                         
                         # all_nodes[ra_incoming_node] is currently a YA:
                         # Get nodes with edge leading into the YA: s
                         # Get the TA with edge to the YA: YA should only have TA incoming if it anchors RA
+                        
                         for ya_incoming_node in all_nodes[ra_incoming_node]['ein']: 
+                            if verbose:
+                                print(f"Checking {ya_incoming_node} {all_nodes[ya_incoming_node]['text']} which has edge toward {ra_incoming_node}")
                             # YA incoming node should be TA
                             # Get L-node descended from TA
                             for ta_out in all_nodes[ya_incoming_node]['eout']:
+                                if verbose:
+                                    print(f"\tLooping through nodes with edges outoing from {ya_incoming_node}: now on {ta_out}")
+                                
                                 if all_nodes[ta_out]['type'] == 'L':
+                                    # Return ID of I-node (if any) anchored in L-node, possibly via a reported speech chain
                                     l = ta_out
                                     i = i_from_l_node(l, all_nodes)
+
+                                    if i == '':
+                                        if verbose:
+                                            print(f"L-node {l} has no out-going I-nodes.")
+                                        continue
+                                    if verbose:
+                                        print(f"\t\t{ta_out} is L-node: {all_nodes[ta_out]['text']}")
+                                        print(f"\t\tFinding I-node anchored in {ta_out}: found {i}")
+
                                     if ra in all_nodes[i]['eout']:
                                         concl_first[spkr]['ra_concl_first'] += 1
                                         if add_to_node:
@@ -689,6 +714,8 @@ def concl_first_perc(xaif, speaker=False, add_to_node=False):
                                     elif ra in all_nodes[i]['ein']:
                                         found_order = True
                                     else:
+                                        if verbose:
+                                            print(f"I-node {i} does not have edge outgoing to or incoming from RA {ra}")
                                         print('I-node not connected to RA')
                                         print(f"\t\t{i}: {all_nodes[i]['text']}")
                                         # print(f"Disconnected I-node ")
@@ -707,6 +734,9 @@ def concl_first_perc(xaif, speaker=False, add_to_node=False):
             return concl_first
         
         for ra in ra_nodes:
+            if verbose:
+                    print(f"Checking RA {ra}")
+
             if add_to_node:
                 current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
                 current_node['concl_first'] = False
@@ -715,23 +745,44 @@ def concl_first_perc(xaif, speaker=False, add_to_node=False):
 
                 # Found a YA with edge to the RA
                 if all_nodes[ra_incoming_node]['type'] == 'YA':
-                    
+                    if verbose:
+                        print(f"{all_nodes[ra_incoming_node]['text']} YA {ra_incoming_node} has edge toward RA {ra}")
+                        print(f"Looping through nodes with edges to {ra_incoming_node} {all_nodes[ra_incoming_node]['text']}")
+
                     # all_nodes[ra_incoming_node] is currently a YA:
                     # Get nodes with edge leading into the YA: s
                     # Get the TA with edge to the YA: YA should only have TA incoming if it anchors RA
                     for ya_incoming_node in all_nodes[ra_incoming_node]['ein']: 
+                        if verbose:
+                            print(f"Checking {ya_incoming_node} {all_nodes[ya_incoming_node]['text']} which has edge toward {ra_incoming_node}")
                         # YA incoming node should be TA
                         # Get L-node descended from TA
                         for ta_out in all_nodes[ya_incoming_node]['eout']:
+                            if verbose:
+                                    print(f"\tLooping through nodes with edges outoing from {ya_incoming_node}: now on {ta_out}")
+
                             if all_nodes[ta_out]['type'] == 'L':
                                 l = ta_out
                                 i = i_from_l_node(l, all_nodes)
+
+                                if i == '':
+                                    if verbose:
+                                        print(f"L-node {l} has no out-going I-nodes.")
+                                    continue
+                                if verbose:
+                                    print(f"\t\t{ta_out} is L-node: {all_nodes[ta_out]['text']}")
+                                    print(f"\t\tFinding I-node anchored in {ta_out}: found {i} ", end='')
+                                    print(f"{all_nodes[i]['text']}")
+
                                 if ra in all_nodes[i]['eout']:
                                     concl_first['ra_concl_first'] += 1
                                     if add_to_node:
                                         # current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
                                         current_node['concl_first'] = True
-                                else:
+                                elif ra not in all_nodes[i]['ein']:
+                                    found_order = True
+                                    if verbose:
+                                            print(f"I-node {i} does not have edge outgoing to or incoming from RA {ra}")
                                     print('I-node not connected to RA')
                                     print(f"\t\t{i}: {all_nodes[i]['text']}")
         
