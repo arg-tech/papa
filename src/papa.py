@@ -48,10 +48,15 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
 
     
         if spkr_analytic_list != []:
+            print(f"spkr_analytic_list: {spkr_analytic_list}")
+            print(f"spkr_rel_counts keys: {spkr_rel_counts.keys()}")
             for s in spkr_rel_counts.keys():
                 # rel_counts[s].update(concl_first[s])
                 for a in spkr_analytic_list:
-                    spkr_rel_counts[s].update(a[s])
+                    try:
+                        spkr_rel_counts[s].update(a[s])
+                    except KeyError:
+                        print(f"Speaker {s} not found in analytic {a}")
                 
 
     # Global analytics
