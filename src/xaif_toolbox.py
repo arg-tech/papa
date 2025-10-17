@@ -301,7 +301,6 @@ def path_to_start(l_node, all_nodes):
 
 # also adds locution associations to i-nodes
 def add_speakers(all_nodes, verbose=False):
-    print("HELLOOOOOO")
     said = {}
 
     for n in [n for n in all_nodes if all_nodes[n]['type'] == 'L']:
@@ -310,7 +309,7 @@ def add_speakers(all_nodes, verbose=False):
         splits = all_nodes[n]['text'].split(':')
         if len(splits) < 2:
             spkr = ''
-            print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
+            # print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
         else:
             spkr = splits[0].strip()
             
@@ -339,19 +338,19 @@ def add_speakers(all_nodes, verbose=False):
                             
                             # If I-node has no known introduction, assume this is it
                             if len(all_nodes[ya_out]['introby']) == 0:
-                                print(f"First finding of intro to {ya_out} is {all_nodes[n]['nodeID']}")
+                                # print(f"First finding of intro to {ya_out} is {all_nodes[n]['nodeID']}")
                                 all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
                             # Otherwise keep the earliest one
                             else:
-                                print(f"Already found an intro to {ya_out}: {all_nodes[ya_out]['introby']}")
+                                # print(f"Already found an intro to {ya_out}: {all_nodes[ya_out]['introby']}")
                                 # Get ID of L-node associated as introducing this I-node
                                 prev_intro = all_nodes[ya_out]['introby'][0]
                                 # Keep whichever one is earlier chronologically
                                 # i.e. if prev 'intro' is actually later than current L-node, replace it
                                 if all_nodes[prev_intro]['chron'] > all_nodes[n]['chron']:
-                                    print(f"Prev 'intro' {prev_intro} is newer ({all_nodes[prev_intro]['chron']}) than current {n} ({all_nodes[n]['chron']})")
+                                    # print(f"Prev 'intro' {prev_intro} is newer ({all_nodes[prev_intro]['chron']}) than current {n} ({all_nodes[n]['chron']})")
                                     all_nodes[ya_out]['introby'] = [n]
-                                    print(f"--> intro for {ya_out} is now {all_nodes[ya_out]['introby']}")
+                                    # print(f"--> intro for {ya_out} is now {all_nodes[ya_out]['introby']}")
         # Reported speech: I-node should be attributed to the quoting speaker
                             
             
@@ -386,7 +385,7 @@ def add_speakers(all_nodes, verbose=False):
 
                     splits = all_nodes[l2]['text'].split(':')
                     if len(splits) < 2:
-                        print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
+                        # print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
                         spkr = ''
                     else:
                         spkr = splits[0].strip()

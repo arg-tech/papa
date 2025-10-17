@@ -1415,14 +1415,22 @@ def path_lens_from_arg(xa_id, seen_xas, all_nodes, rel_type='RA', speaker=False,
     path_list = []
 
     if verbose:
-        print("Targeting I-node(s)", i_node_concls)
+        print("Targeting conclusion I-node(s)", i_node_concls)
 
     for i_concl in i_node_concls:
+        if verbose:
+            print(f"\tCurrently on {i_concl}")
         if speaker:
+            if verbose:
+                print(f"\t\t{rel_type}-nodes with edge to {i_concl}: {[n for n in all_nodes if i_concl in all_nodes[n]['ein']]}")
             xas_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
                     and all_nodes[n]['type'] == rel_type 
+                    and len(all_nodes[n]['speaker']) != 0
                     and all_nodes[n]['speaker'][0] == target_spkr]
+
         else:
+            if verbose:
+                print(f"\t\t{rel_type}-nodes with edge to {i_concl}: {[n for n in all_nodes if i_concl in all_nodes[n]['ein']]}")
             xas_out = [n for n in all_nodes if i_concl in all_nodes[n]['ein'] 
                     and all_nodes[n]['type'] == rel_type]
         if verbose:
@@ -1504,11 +1512,14 @@ def arg_depths(xaif, rel_type='RA', speaker=False, verbose=False, skip_altgive=T
             for xa in spkr_xa_all:
                 spkr_starts += initial_arg(xa, [], all_nodes, speaker=speaker, verbose=verbose, rel_type=rel_type, skip_altgive=skip_altgive)
             spkr_starts = list(set(spkr_starts))
+
+            if verbose:
+                print(f"Starters for {spkr} are: ", spkr_starts)
             
             # Follow each argument path from the first RAs in each path
             for starter_arg in spkr_starts:
                 if verbose:
-                    print("Looking for argument ", starter_arg)
+                    print("\n!!! New Start !!! Looking for argument ", starter_arg)
                 new_path_lens = path_lens_from_arg(starter_arg, [], all_nodes, speaker=speaker, verbose=verbose)
                 xa_depths[spkr][f'{depth_type}_depths'] = xa_depths[spkr][f'{depth_type}_depths'] + new_path_lens
                 
@@ -1524,10 +1535,13 @@ def arg_depths(xaif, rel_type='RA', speaker=False, verbose=False, skip_altgive=T
             starts += initial_arg(xa, [], all_nodes, speaker=speaker, verbose=verbose, rel_type=rel_type)
         starts = list(set(starts))
 
+        if verbose:
+            print("Starters are: ", starts)
+
         # Follow each argument path from the first RAs in each path
         for starter_arg in starts:
             if verbose:
-                print("Looking for argument ", starter_arg)
+                print("\n!!! New Start !!! Looking for argument ", starter_arg)
             new_path_lens = path_lens_from_arg(starter_arg, [], all_nodes, rel_type=rel_type, speaker=speaker, verbose=verbose)
             xa_depths[f'{depth_type}_depths'] = xa_depths[f'{depth_type}_depths'] + new_path_lens
 
