@@ -309,7 +309,7 @@ def add_speakers(all_nodes, verbose=False):
         splits = all_nodes[n]['text'].split(':')
         if len(splits) < 2:
             spkr = ''
-            print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
+            # print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
         else:
             spkr = splits[0].strip()
             
@@ -332,10 +332,25 @@ def add_speakers(all_nodes, verbose=False):
                     for ya_out in all_nodes[ya]['eout']:
                         if all_nodes[ya_out]['type'] == 'I':
                             if spkr != '':
-                                all_nodes[ya_out]['saidby'].append(spkr)
-                                said[spkr].append(all_nodes[ya_out]['nodeID'])
-
-                            all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
+                                if all_nodes[ya]['text'] != 'Disagreeing':
+                                    all_nodes[ya_out]['saidby'].append(spkr)
+                                    said[spkr].append(all_nodes[ya_out]['nodeID'])
+                            
+                            # If I-node has no known introduction, assume this is it
+                            if len(all_nodes[ya_out]['introby']) == 0:
+                                # print(f"First finding of intro to {ya_out} is {all_nodes[n]['nodeID']}")
+                                all_nodes[ya_out]['introby'].append(all_nodes[n]['nodeID'])
+                            # Otherwise keep the earliest one
+                            else:
+                                # print(f"Already found an intro to {ya_out}: {all_nodes[ya_out]['introby']}")
+                                # Get ID of L-node associated as introducing this I-node
+                                prev_intro = all_nodes[ya_out]['introby'][0]
+                                # Keep whichever one is earlier chronologically
+                                # i.e. if prev 'intro' is actually later than current L-node, replace it
+                                if all_nodes[prev_intro]['chron'] > all_nodes[n]['chron']:
+                                    # print(f"Prev 'intro' {prev_intro} is newer ({all_nodes[prev_intro]['chron']}) than current {n} ({all_nodes[n]['chron']})")
+                                    all_nodes[ya_out]['introby'] = [n]
+                                    # print(f"--> intro for {ya_out} is now {all_nodes[ya_out]['introby']}")
         # Reported speech: I-node should be attributed to the quoting speaker
                             
             
@@ -370,24 +385,36 @@ def add_speakers(all_nodes, verbose=False):
 
                     splits = all_nodes[l2]['text'].split(':')
                     if len(splits) < 2:
-                        print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
+                        # print(f"L-node with no recognisable speaker:\t{all_nodes[n]['nodeID']}")
                         spkr = ''
                     else:
                         spkr = splits[0].strip()
                     
                     for ta_out in all_nodes[n]['eout']:
-                        if all_nodes[ta_out]['type'] == 'YA':
-                            for i_out in all_nodes[ta_out]['eout']:
-                                if all_nodes[i_out]['type'] == 'I' and spkr != '':
+                        if all_nodes[ta_out]['type'] == 'YA' and all_nodes[ta_out]['text'] != 'Disagreeing':
+                            for ya_out in all_nodes[ta_out]['eout']:
+                                if all_nodes[ya_out]['type'] == 'I' and spkr != '':
                                     # Record node-wise
-                                    all_nodes[i_out]['saidby'].append(spkr)
-                                    all_nodes[i_out]['introby'].append(l2)
+                                    all_nodes[ya_out]['saidby'].append(spkr)
+
+                                    # If I-node has no known introduction, assume this is it
+                                    if len(all_nodes[ya_out]['introby']) == 0:
+                                        all_nodes[ya_out]['introby'].append(l2)
+                                    # Otherwise keep the earliest one
+                                    else:
+                                        prev_intro = all_nodes[ya_out]['introby'][0]
+                                        # if prev 'intro' is actually later than current L-node, replace it
+                                        if all_nodes[prev_intro]['chron'] > all_nodes[l2]['chron']:
+                                            # print(f"Prev 'intro' {prev_intro} is newer ({all_nodes[prev_intro]['chron']}) than current {n} ({all_nodes[n]['chron']})")
+                                            all_nodes[ya_out]['introby'] = [l2]
+                                            # print(f"--> intro for {ya_out} is now {all_nodes[ya_out]['introby']}")
+
 
                                     # Record speaker-wise
                                     if spkr in said:
-                                        said[spkr].append(all_nodes[i_out]['nodeID'])
+                                        said[spkr].append(all_nodes[ya_out]['nodeID'])
                                     else:
-                                        said[spkr] = all_nodes[i_out]['nodeID']
+                                        said[spkr] = all_nodes[ya_out]['nodeID']
                                         
 
         # Adding speaker attribution to arg relations based on speaker of L-nodes descended from the anchoring TA
@@ -473,7 +500,7 @@ def add_agreement(all_nodes):
         if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == ('Agreeing' or 'Asserting'):
             for e_in in all_nodes[n]['ein']:
                 for e_out in all_nodes[n]['eout']:
-                    if all_nodes[e_in]['type'] == 'L' and all_nodes[e_out]['type'] == 'I':
+                    if (all_nodes[e_in]['type'] == 'L' or all_nodes[e_in]['type'] == 'TA') and all_nodes[e_out]['type'] == 'I':
                         all_nodes[e_out]['agree'] = all_nodes[e_out]['agree'] + all_nodes[e_in]['speaker']
                         # all_nodes[e_out]['agree'].append(all_nodes[e_in]['speaker'])
         
