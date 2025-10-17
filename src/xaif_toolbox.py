@@ -501,7 +501,7 @@ def add_agreement(all_nodes):
         if all_nodes[n]['type'] == 'YA' and all_nodes[n]['text'] == ('Agreeing' or 'Asserting'):
             for e_in in all_nodes[n]['ein']:
                 for e_out in all_nodes[n]['eout']:
-                    if all_nodes[e_in]['type'] == 'L' and all_nodes[e_out]['type'] == 'I':
+                    if (all_nodes[e_in]['type'] == 'L' or all_nodes[e_in]['type'] == 'TA') and all_nodes[e_out]['type'] == 'I':
                         all_nodes[e_out]['agree'] = all_nodes[e_out]['agree'] + all_nodes[e_in]['speaker']
                         # all_nodes[e_out]['agree'].append(all_nodes[e_in]['speaker'])
         
