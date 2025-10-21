@@ -7,13 +7,18 @@ document.getElementById("submitButton").addEventListener("click", async () => {
   }
 
   const reader = new FileReader();
-  const imcSwitch = document.getElementById("imcSwitch");
+  const nodeLevel = document.getElementById("node_level");
+  const speaker = document.getElementById("speaker");
+  const forecast = document.getElementById("forecast");
 
   reader.onload = async (e) => {
     const rawJSON = JSON.parse(e.target.result);
 
     // log to see if the json is being parsed correctly
     console.log("Parsed JSON:", rawJSON);
+    console.log(nodeLevel.checked);
+    console.log(speaker.checked);
+    console.log(forecast.checked);
 
     const response = await fetch("/api/all_analytics", {
       method: "POST",
@@ -22,6 +27,9 @@ document.getElementById("submitButton").addEventListener("click", async () => {
       },
       body: JSON.stringify({
         xaif: rawJSON,
+        node_level: nodeLevel.checked,
+        speaker: speaker.checked,
+        forecast: forecast.checked,
       }),
     });
 
