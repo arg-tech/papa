@@ -49,6 +49,7 @@ document.getElementById("submitButton").addEventListener("click", async () => {
     URL.revokeObjectURL(url);
 
     // displaying the json file on frontend
+    document.getElementById("json").style = "display: flex";
     document.querySelector('#json').data = data;
     document.getElementById("responseBox").style = "display: none";
   };

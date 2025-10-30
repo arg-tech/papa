@@ -72,6 +72,9 @@
           <h5 class="mb-2 flex-grow-1" style="font-weight: 600; color: #2b3b50">
             Analytics
           </h5>
+          <button id="clearFile" class="btn btn-primary btn-sm mb-2 p-2" type="button" title="Clear selected file">
+            Clear Selection
+          </button>
         </div>
 
         <div id="responseBox" aria-live="polite">
@@ -86,17 +89,26 @@
     // optional UI helper for showing/clearing file selection
     (function () {
       const fileInput = document.getElementById("fileInput");
-      // const clearBtn = document.getElementById("clearFile");
+      const clearBtn = document.getElementById("clearFile");
       const responseBox = document.getElementById("responseBox");
 
       if (fileInput) {
         fileInput.addEventListener("change", () => {
           const file = fileInput.files[0];
           if (file) {
-            responseBox.textContent = `Selected file: ${file.name}\n\nClick Submit to validate.`;
+            responseBox.textContent = `Selected file: ${file.name}\n\nClick Submit to get analytics.`;
           } else {
             responseBox.textContent = "No file selected";
           }
+        });
+      }
+
+      if (clearBtn) {
+        clearBtn.addEventListener("click", () => {
+          if (fileInput) fileInput.value = "";
+          responseBox.style = "display: flex";
+          responseBox.textContent = "Please select a file";
+          document.getElementById('json').style = "display: none";
         });
       }
     })();
