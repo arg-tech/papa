@@ -48,10 +48,18 @@ document.getElementById("submitButton").addEventListener("click", async () => {
     a.remove();
     URL.revokeObjectURL(url);
 
-    // displaying the json file on frontend
-    document.getElementById("json").style = "display: flex";
-    document.querySelector('#json').data = data;
-    document.getElementById("responseBox").style = "display: none";
+    // displaying the json file on frontend if there is a response
+    if (response.status === 200) {
+      document.getElementById("json").style = "display: flex";
+      document.querySelector('#json').data = data.analytics;
+      document.getElementById("responseBox").style = "display: none";
+    }
+    // displaying an error message in response box if papa fails
+    else {
+      document.getElementById('json').style = "display: none";
+      document.getElementById("responseBox").style = "display: flex";
+      document.getElementById("responseBox").innerHTML = "There was an error in the analytics code. Open the downloaded file to see more details"
+    }
   };
 
   reader.readAsText(selectedFile);
