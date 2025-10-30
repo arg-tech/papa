@@ -48,52 +48,9 @@ document.getElementById("submitButton").addEventListener("click", async () => {
     a.remove();
     URL.revokeObjectURL(url);
 
-    // if (data.errors.length === 0) {
-    //   let displayMessage = "No errors to display";
-    //   document.getElementById("responseBox").innerText = displayMessage;
-    //   return;
-    // }
-
-    // let html;
-    // if (data.errors.length < 3) {
-    //   html = `<table class="table table-hover">`;
-    // } else {
-    //   html = `<table class='table table-striped table-hover'>`;
-    // }
-
-    // html += `<thead>
-    //   <tr>
-    //     <th>#</th>
-    //     <th>Error Description</th>
-    //     <th>Node Text</th>
-    //     <th class="advanced-col text-nowrap d-none">Node ID</th>
-    //     <th class="advanced-col text-nowrap d-none">Edge ID</th>
-    //   </tr>
-    // </thead>
-    // <tbody class="table-group-divider">`;
-    // for (const [index, error] of data.errors.entries()) {
-    //   html += `<tr>
-    //     <td>${index + 1}</td>
-    //     <td>${error.description}</td>
-    //     <td>${error.nodes[0].text}</td>`;
-
-    //   // Add nodes to table
-    //   html +=
-    //     '<td class="advanced-col d-none">' +
-    //     (error.nodes?.map((node) => node.nodeID).join(", ") || "N/A") +
-    //     "</td>";
-
-    //   // Add edges to table
-    //   html +=
-    //     '<td class="advanced-col d-none">' +
-    //     (error.edges?.map((edge) => edge.edgeID).join(", ") || "N/A") +
-    //     "</td>";
-
-    //   html += `</tr>`;
-    // }
-    // html += "</tbody></table>";
-    // console.log(html);
-    // document.getElementById("responseBox").innerHTML = html;
+    // displaying the json file on frontend
+    document.querySelector('#json').data = data;
+    document.getElementById("responseBox").style = "display: none";
   };
 
   reader.readAsText(selectedFile);
