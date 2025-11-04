@@ -45,6 +45,7 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
         spkr_analytic_list.append(analytics.concl_count(xaif, speaker=speaker))
         spkr_analytic_list.append(analytics.prem_concl_ratio(xaif, speaker=speaker))
         spkr_analytic_list.append(analytics.ra_ca_ratio(xaif, speaker=speaker))
+        spkr_analytic_list.append(analytics.ya_count(xaif, speaker=speaker))
 
     
         if spkr_analytic_list != []:
@@ -76,6 +77,8 @@ def all_analytics(xaif, node_level=False, speaker=False, forecast=False):
     global_analytics = global_analytics | analytics.concl_count(xaif, speaker=False)
     global_analytics = global_analytics | analytics.prem_concl_ratio(xaif, speaker=False)
     global_analytics = global_analytics | analytics.ra_ca_ratio(xaif, speaker=False)
+    global_analytics = global_analytics | analytics.concl_first_perc(xaif, speaker=False)
+
 
     global_analytics = global_analytics | analytics.avg_inode_sentiment(xaif)
     global_analytics = global_analytics | analytics.arg_struct_sentiment(xaif)
