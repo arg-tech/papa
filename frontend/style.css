@@ -1,0 +1,111 @@
+:root {
+  --bg: #f5f7fa;
+  --card-bg: #ffffff;
+  --muted: #6c757d;
+  --primary: #0b4fc6;   /* navy blue */
+  --accent: #0d9488;   /* teal */
+  --accent-2: #475ea8; /* indigo */
+  --border: #e6e9ef;
+}
+
+body {
+  background-color: var(--bg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #222;
+  padding: 48px 16px;
+}
+
+.container {
+  max-width: 960px;
+}
+
+h1.app-title {
+  text-align: center;
+  color: var(--primary);
+  margin-bottom: 40px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  font-size: 2.9rem;
+}
+
+.app-card {
+  border: none;
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: 0 10px 30px rgba(28, 40, 60, 0.08);
+  overflow: hidden;
+}
+
+.app-card::before {
+  content: "";
+  display: block;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+.app-card .card-body {
+  padding: 1.5rem;
+}
+
+label.form-label {
+  font-weight: 600;
+  color: #24324a;
+}
+
+.file-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.form-text.small-muted {
+  color: var(--muted);
+}
+
+.form-control:focus {
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.08);
+  border-color: var(--accent);
+}
+
+.form-check-input:checked {
+  background-color: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(11, 79, 198, 0.12);
+}
+
+.btn-sm:hover {
+  transform: none;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 1rem 0;
+}
+
+#responseBox {
+  background: linear-gradient(to bottom, #f9fbfd, #f6f8fa);
+  border: 1px solid #dce3eb;
+  border-radius: 8px;
+  padding: 1.25rem;
+  min-height: 150px;
+  font-size: 0.95rem;
+  color: #2b3b50;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

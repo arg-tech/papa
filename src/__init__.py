@@ -1,6 +1,7 @@
 import traceback
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 from . import papa
 
@@ -29,3 +30,13 @@ def all_analytics(body: RequestBody | dict) -> dict:
             return papa.all_analytics(body)
     except Exception:
         raise HTTPException(status_code=500, detail=traceback.format_exc())
+
+
+app.mount(
+    "/",
+    StaticFiles(
+        directory="frontend",
+        html=True,
+    ),
+    name="web",
+)

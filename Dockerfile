@@ -19,9 +19,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && uv run -m nltk.downloader punkt_tab -d /app/.venv/nltk_data \
     && uv run -m nltk.downloader averaged_perceptron_tagger_eng -d /app/.venv/nltk_data
 
-COPY src/ /app/src/
+COPY . /app/
 
 FROM python:3.13-slim-trixie@sha256:087a9f3b880e8b2c7688debb9df2a5106e060225ebd18c264d5f1d7a73399db0 AS runtime
+
+WORKDIR /app
 
 COPY --from=builder /app /app
 
