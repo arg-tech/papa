@@ -23,9 +23,14 @@ nlp = spacy.load("en_core_web_sm")
 
 # Get speaker who first introduced I-node based on the speaker of the chronologically 
 # earliest locution connected to it
-def i_node_introducer(i_node, all_nodes):
-        intro_loc = all_nodes[i_node]['introby'][0]
-        speaker = all_nodes[intro_loc]['speaker'][0] # !! ASSUMPTION
+def i_node_introducer(i_node, all_nodes, verbose=False):
+        if verbose:
+            print(f"Finding introducing L-node for I-node {i_node}")
+        try:
+            intro_loc = all_nodes[i_node]['introby'][0]
+            speaker = all_nodes[intro_loc]['speaker'][0] # !! ASSUMPTION
+        except IndexError:
+            speaker = ''
         # print("all_nodes[i_node]['introby'] = ", all_nodes[i_node]['introby'])
         # print("all_nodes[intro_loc]['speaker'] = ", all_nodes[intro_loc]['speaker'])
         return speaker
@@ -504,13 +509,18 @@ def premise_count(xaif, speaker=False, verbose=False, add_to_node=False):
                             break
                         # Different speaker: check if concl is pre-existing material -- if concl added later, don't consider this a spkr premise
                         else:
-                            intro_prem = all_nodes[i]['introby'][0]
-                            intro_concl = all_nodes[n]['introby'][0]
-                            if all_nodes[intro_concl]['chron'] < all_nodes[intro_prem]['chron']:
-                                is_premise = True
+                            try:
+                                intro_prem = all_nodes[i]['introby'][0]
+                                intro_concl = all_nodes[n]['introby'][0]
+
+                                if all_nodes[intro_concl]['chron'] < all_nodes[intro_prem]['chron']:
+                                    is_premise = True
                                 if add_to_node:
                                     current_node['is_premise'] = is_premise
-
+                            # If one of the pair can't be attributed, this can't be verified: move on
+                            except IndexError:
+                                pass
+                            
 
                     if is_premise:
                         break
@@ -1932,7 +1942,7 @@ def direct_args_from_others(xaif, debug=False, add_to_node=False):
 
 # Number of arguments by speaker where one (or more) of the propositions attributed to the arguing speaker 
 # is a rephrase of a proposition introduced by another speaker
-def indirect_args_from_others(xaif, debug=False, add_to_node=False):
+def indirect_args_from_others(xaif, verbose=False, add_to_node=False):
     if 'AIF' in xaif.keys():
         all_nodes, said = ova3.xaif_preanalytic_info_collection(xaif)
     else:
@@ -1947,7 +1957,7 @@ def indirect_args_from_others(xaif, debug=False, add_to_node=False):
 
     # Get all props associated with speaker that are connected to the RA
     for spkr in said:
-        if debug:
+        if verbose:
             print(f"Checking for speaker {spkr}")
         other_arg_count[spkr] = {'indirect_args_from_others': 0}
         
@@ -1959,16 +1969,16 @@ def indirect_args_from_others(xaif, debug=False, add_to_node=False):
 
             # Get all connected props
             props_in_arg = props_linked_to_rel(ra, all_nodes)
-            prop_spkrs = [(p, i_node_introducer(p, all_nodes)) for p in props_in_arg]
+            prop_spkrs = [(p, i_node_introducer(p, all_nodes, verbose=verbose)) for p in props_in_arg]
 
-            if debug:
+            if verbose:
                 print(f"\tChecking RA {ra}:")
                 print(f"\t\tProps:", props_in_arg)
 
             # Get props from arguing speaker
             own_props = []
             for prop, p_spkr in prop_spkrs:
-                if debug:
+                if verbose:
                     print(f"\t\t{prop}, {p_spkr}: {all_nodes[prop]['text']}")
                 if spkr == p_spkr:
                     own_props.append(prop)
@@ -1977,16 +1987,17 @@ def indirect_args_from_others(xaif, debug=False, add_to_node=False):
             for prop in own_props:
                 ma_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'MA' and prop in all_nodes[n]['ein']]
 
-                if debug:
+                if verbose:
                     if len(ma_nodes) == 0:
-                        print(f"\t\tNo MA nodes connected to I-node {prop}")
+                        print(f"\t\tI-node {prop} does not rephrase via MA node")
                     else:
-                        print(f"\t\tMA nodes connected to I-node {prop}:", ma_nodes)
+                        print(f"\t\tI-node {prop} rephrases via MA node(s):", ma_nodes)
 
                 for ma in ma_nodes:
                     # original prop being rephrased
                     orig_prop = [n for n in all_nodes if all_nodes[n]['type'] == 'I' and n in all_nodes[ma]['eout']][0]
-                    if i_node_introducer(orig_prop, all_nodes) != spkr:
+                    # Checking for != spkr, but also don't count if the introducer is unknown
+                    if i_node_introducer(orig_prop, all_nodes) not in [spkr, '']:
                         other_arg_count[spkr]['indirect_args_from_others'] += 1
                         if add_to_node:
                             current_node = [n for n in xaif['AIF']['nodes'] if n['nodeID'] == ra][0]
