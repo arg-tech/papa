@@ -179,18 +179,25 @@ def loc_counts(xaif, speaker=False, verbose=False):
     else:
         all_nodes, _ = ova2.xaif_preanalytic_info_collection(xaif)
     
-    # relation_counts = arg_relation_counts(xaif)
     
+    # Get all YA nodes: will be for ruling out reported speech
+    ya_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'YA']
+
     if speaker:
         spkr_loc_counts = {}
         for s in said.keys():
-            spkr_locs = len([n for n in all_nodes if all_nodes[n]['type'] == 'L' and all_nodes[n]['speaker'][0] == s])
+            if verbose:
+                print(f"Counting locs for speaker {s}")
+            
+            spkr_locs = [n for n in all_nodes if all_nodes[n]['type'] == 'L' and s in all_nodes[n]['speaker']]
+            
+            # remove any that are reported
+            spkr_orig_locs = [n for n in spkr_locs if not set(all_nodes[n]['ein']).intersection(set(ya_nodes))]
+            spkr_locs_count = len(spkr_orig_locs)
             spkr_loc_counts[s] = {}
-            spkr_loc_counts[s]['loc_count'] = spkr_locs
+            spkr_loc_counts[s]['loc_count'] = spkr_locs_count
         return spkr_loc_counts
     else: # Avoiding any reported speech: assumes meta-nodes for analysis have been removed
-        # get all YA and L nodes
-        ya_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'YA']
         l_nodes = [n for n in all_nodes if all_nodes[n]['type'] == 'L']
         
         if verbose:
