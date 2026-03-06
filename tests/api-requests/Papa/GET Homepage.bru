@@ -1,0 +1,22 @@
+meta {
+  name: GET Homepage
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/
+  auth: inherit
+}
+
+tests {
+  test("Response status should be 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Response should contain PAPA title", function () {
+    const body = res.getBody();
+    expect(body).to.be.a('string');
+    expect(body).to.include('PAPA');
+  });
+}
