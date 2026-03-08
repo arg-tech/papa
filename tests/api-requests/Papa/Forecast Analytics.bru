@@ -1,0 +1,39 @@
+meta {
+  name: Forecast Analytics
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/all_analytics
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+script:pre-request {
+  const xaif = require('./test-inputs/xaif_forecast.json');
+  req.setBody(JSON.stringify({ xaif: xaif, forecast: true }));
+}
+
+body:json {
+  {}
+}
+
+tests {
+  // Forecast analytics using a real forecast XAIF (28106.json) with hypothesis subgraphs.
+  // Tests accuracy, correctness classification, per-hypothesis metrics, and standard deviations.
+
+  test("Response status should be 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Response should match expected output", function () {
+    const expected = require('./test-inputs/expected_forecast.json');
+    const body = res.getBody();
+    expect(body).to.deep.equal(expected);
+  });
+}

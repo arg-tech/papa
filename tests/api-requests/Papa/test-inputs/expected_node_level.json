@@ -1,0 +1,353 @@
+{
+  "AIF": {
+    "nodes": [
+      {
+        "nodeID": "1",
+        "text": "We should invest in renewable energy",
+        "type": "L"
+      },
+      {
+        "nodeID": "2",
+        "text": "Fossil fuels are more reliable",
+        "type": "L"
+      },
+      {
+        "nodeID": "3",
+        "text": "Wind power has become cost effective",
+        "type": "L"
+      },
+      {
+        "nodeID": "4",
+        "text": "We should invest in renewable energy",
+        "type": "I"
+      },
+      {
+        "nodeID": "5",
+        "text": "Fossil fuels are more reliable",
+        "type": "I"
+      },
+      {
+        "nodeID": "6",
+        "text": "Wind power has become cost effective",
+        "type": "I"
+      },
+      {
+        "nodeID": "7",
+        "text": "Default Illocuting",
+        "type": "YA"
+      },
+      {
+        "nodeID": "8",
+        "text": "Default Illocuting",
+        "type": "YA"
+      },
+      {
+        "nodeID": "9",
+        "text": "Default Illocuting",
+        "type": "YA"
+      },
+      {
+        "nodeID": "10",
+        "text": "Default Inference",
+        "type": "RA"
+      },
+      {
+        "nodeID": "11",
+        "text": "Default Conflict",
+        "type": "CA"
+      }
+    ],
+    "edges": [
+      {
+        "edgeID": "1",
+        "fromID": "1",
+        "toID": "7"
+      },
+      {
+        "edgeID": "2",
+        "fromID": "7",
+        "toID": "4"
+      },
+      {
+        "edgeID": "3",
+        "fromID": "2",
+        "toID": "8"
+      },
+      {
+        "edgeID": "4",
+        "fromID": "8",
+        "toID": "5"
+      },
+      {
+        "edgeID": "5",
+        "fromID": "3",
+        "toID": "9"
+      },
+      {
+        "edgeID": "6",
+        "fromID": "9",
+        "toID": "6"
+      },
+      {
+        "edgeID": "7",
+        "fromID": "6",
+        "toID": "10"
+      },
+      {
+        "edgeID": "8",
+        "fromID": "10",
+        "toID": "4"
+      },
+      {
+        "edgeID": "9",
+        "fromID": "5",
+        "toID": "11"
+      },
+      {
+        "edgeID": "10",
+        "fromID": "11",
+        "toID": "4"
+      }
+    ],
+    "schemefulfillments": [],
+    "participants": [
+      {
+        "participantID": "1",
+        "firstname": "Alice",
+        "surname": "A"
+      },
+      {
+        "participantID": "2",
+        "firstname": "Bob",
+        "surname": "B"
+      }
+    ],
+    "locutions": [
+      {
+        "nodeID": "1",
+        "personID": "1"
+      },
+      {
+        "nodeID": "2",
+        "personID": "2"
+      },
+      {
+        "nodeID": "3",
+        "personID": "1"
+      }
+    ]
+  },
+  "text": "Alice A: We should invest in renewable energy. Bob B: Fossil fuels are more reliable. Alice A: Wind power has become cost effective.",
+  "OVA": {
+    "firstname": "",
+    "surname": "",
+    "url": "",
+    "nodes": [
+      {
+        "nodeID": "1",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "2",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "3",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "4",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "5",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "6",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "7",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "8",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "9",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "10",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      },
+      {
+        "nodeID": "11",
+        "visible": true,
+        "x": 0,
+        "y": 0,
+        "timestamp": ""
+      }
+    ],
+    "edges": []
+  },
+  "analytics": {
+    "global": {
+      "wordcount": 23,
+      "loc_count": 3,
+      "ra_count": 1,
+      "ca_count": 1,
+      "ma_count": 0,
+      "ra_word_density": 0.043478260869565216,
+      "ca_word_density": 0.043478260869565216,
+      "ma_word_density": 0.0,
+      "arg_word_density": 0.08695652173913043,
+      "ra_loc_density": 0.3333333333333333,
+      "ca_loc_density": 0.3333333333333333,
+      "ma_loc_density": 0.0,
+      "arg_loc_density": 0.6666666666666666,
+      "ra_serial_count": 0,
+      "ra_serial_perc": 0.0,
+      "ra_convergent_count": 0,
+      "ra_convergent_perc": 0.0,
+      "ra_divergent_count": 0,
+      "ra_divergent_perc": 0.0,
+      "ra_linked_count": 0,
+      "ra_linked_perc": 0.0,
+      "premise_count": 1,
+      "concl_count": 1,
+      "premise_to_concl": 1.0,
+      "ra_to_ca": 1.0,
+      "ra_concl_first": 0,
+      "ra_concl_first_perc": 0.0,
+      "avg_node_sentiment_neg": 0.0,
+      "avg_node_sentiment_neu": 0.774,
+      "avg_node_sentiment_pos": 0.226,
+      "avg_node_sentiment_compound": 0.25,
+      "arg_sentiment_pos": 0.257,
+      "arg_sentiment_neu": 0.743,
+      "arg_sentiment_neg": 0.0,
+      "arg_sentiment_compound": 0.6369,
+      "graph_tenses_past": 0.3333333333333333,
+      "graph_tenses_present": 1.0,
+      "graph_tenses_base": 1.0,
+      "ya_counts": {
+        "Default Illocuting": 3
+      },
+      "ca_source_attacked": 0,
+      "ca_source_supported": 0
+    },
+    "node": [
+      {
+        "word_count": [
+          {
+            "node id:": "4",
+            "word count:": 6
+          },
+          {
+            "node id:": "5",
+            "word count:": 5
+          },
+          {
+            "node id:": "6",
+            "word count:": 6
+          }
+        ]
+      },
+      {
+        "supported_nodes": 1
+      },
+      {
+        "attacked_nodes": 1
+      },
+      {
+        "node_tenses": [
+          {
+            "node id": "4",
+            "past": 0,
+            "present": 0,
+            "base": 1
+          },
+          {
+            "node id": "5",
+            "past": 0,
+            "present": 1,
+            "base": 1
+          },
+          {
+            "node id": "6",
+            "past": 1,
+            "present": 2,
+            "base": 1
+          }
+        ]
+      },
+      {
+        "named entities": []
+      },
+      {
+        "sentiment": [
+          {
+            "node id": "4",
+            "sentiment": {
+              "neg": 0.0,
+              "neu": 0.704,
+              "pos": 0.296,
+              "compound": 0.2732
+            }
+          },
+          {
+            "node id": "5",
+            "sentiment": {
+              "neg": 0.0,
+              "neu": 1.0,
+              "pos": 0.0,
+              "compound": 0.0
+            }
+          },
+          {
+            "node id": "6",
+            "sentiment": {
+              "neg": 0.0,
+              "neu": 0.617,
+              "pos": 0.383,
+              "compound": 0.4767
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

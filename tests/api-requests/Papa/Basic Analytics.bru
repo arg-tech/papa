@@ -1,0 +1,96 @@
+meta {
+  name: Basic Analytics
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/all_analytics
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "xaif": {
+      "AIF": {
+        "nodes": [
+          {"nodeID": "1", "text": "We should invest in renewable energy", "type": "L"},
+          {"nodeID": "2", "text": "Fossil fuels are more reliable", "type": "L"},
+          {"nodeID": "3", "text": "Wind power has become cost effective", "type": "L"},
+          {"nodeID": "4", "text": "We should invest in renewable energy", "type": "I"},
+          {"nodeID": "5", "text": "Fossil fuels are more reliable", "type": "I"},
+          {"nodeID": "6", "text": "Wind power has become cost effective", "type": "I"},
+          {"nodeID": "7", "text": "Default Illocuting", "type": "YA"},
+          {"nodeID": "8", "text": "Default Illocuting", "type": "YA"},
+          {"nodeID": "9", "text": "Default Illocuting", "type": "YA"},
+          {"nodeID": "10", "text": "Default Inference", "type": "RA"},
+          {"nodeID": "11", "text": "Default Conflict", "type": "CA"}
+        ],
+        "edges": [
+          {"edgeID": "1", "fromID": "1", "toID": "7"},
+          {"edgeID": "2", "fromID": "7", "toID": "4"},
+          {"edgeID": "3", "fromID": "2", "toID": "8"},
+          {"edgeID": "4", "fromID": "8", "toID": "5"},
+          {"edgeID": "5", "fromID": "3", "toID": "9"},
+          {"edgeID": "6", "fromID": "9", "toID": "6"},
+          {"edgeID": "7", "fromID": "6", "toID": "10"},
+          {"edgeID": "8", "fromID": "10", "toID": "4"},
+          {"edgeID": "9", "fromID": "5", "toID": "11"},
+          {"edgeID": "10", "fromID": "11", "toID": "4"}
+        ],
+        "schemefulfillments": [],
+        "participants": [
+          {"participantID": "1", "firstname": "Alice", "surname": "A"},
+          {"participantID": "2", "firstname": "Bob", "surname": "B"}
+        ],
+        "locutions": [
+          {"nodeID": "1", "personID": "1"},
+          {"nodeID": "2", "personID": "2"},
+          {"nodeID": "3", "personID": "1"}
+        ]
+      },
+      "text": "Alice A: We should invest in renewable energy. Bob B: Fossil fuels are more reliable. Alice A: Wind power has become cost effective.",
+      "OVA": {
+        "firstname": "",
+        "surname": "",
+        "url": "",
+        "nodes": [
+          {"nodeID": "1", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "2", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "3", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "4", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "5", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "6", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "7", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "8", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "9", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "10", "visible": true, "x": 0, "y": 0, "timestamp": ""},
+          {"nodeID": "11", "visible": true, "x": 0, "y": 0, "timestamp": ""}
+        ],
+        "edges": []
+      }
+    }
+  }
+}
+
+tests {
+  // Global analytics for a simple argument graph:
+  // - 3 locutions from 2 speakers
+  // - 1 RA (inference): node 6 -> node 4
+  // - 1 CA (conflict): node 5 -> node 4
+
+  test("Response status should be 200", function () {
+    expect(res.status).to.equal(200);
+  });
+
+  test("Response should match expected output", function () {
+    const expected = require('./test-inputs/expected_basic.json');
+    const body = res.getBody();
+    expect(body).to.deep.equal(expected);
+  });
+}
